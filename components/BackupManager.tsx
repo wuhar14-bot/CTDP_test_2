@@ -1,6 +1,8 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { SacredSeatData } from '../types';
 import { Button } from './Button';
+import { supabase } from '../supabaseClient';
+import { User } from '@supabase/supabase-js';
 
 interface BackupManagerProps {
   data: SacredSeatData;
@@ -9,15 +11,120 @@ interface BackupManagerProps {
 
 export const BackupManager: React.FC<BackupManagerProps> = ({ data, onImport }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [msg, setMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+  const [msg, setMsg] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
+  
+  // Auth State
+  const [user, setUser] = useState<User | null>(null);
+  const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [isClientReady, setIsClientReady] = useState(false);
+
+  // Initialize Supabase Auth Listener
+  useEffect(() => {
+    if (supabase) {
+      setIsClientReady(true);
+      // Check active session
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        setUser(session?.user ?? null);
+      });
+
+      // Listen for changes
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        setUser(session?.user ?? null);
+      });
+
+      return () => subscription.unsubscribe();
+    }
+  }, []);
 
   // Helper to show temporary status messages
-  const flashMsg = (text: string, type: 'success' | 'error' = 'success') => {
+  const flashMsg = (text: string, type: 'success' | 'error' | 'info' = 'success') => {
     setMsg({ text, type });
-    setTimeout(() => setMsg(null), 3000);
+    setTimeout(() => setMsg(null), 4000);
   };
 
-  // --- Clipboard Methods ---
+  // --- CLOUD SYNC METHODS ---
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!supabase) return;
+    
+    setLoading(true);
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        // Redirect back to the current page after login
+        emailRedirectTo: window.location.href,
+      }
+    });
+
+    if (error) {
+      flashMsg(error.message, 'error');
+    } else {
+      flashMsg('Check your email for the login link!', 'info');
+    }
+    setLoading(false);
+  };
+
+  const handleLogout = async () => {
+    if (!supabase) return;
+    await supabase.auth.signOut();
+    flashMsg('Logged out successfully');
+  };
+
+  const handlePushToCloud = async () => {
+    if (!supabase || !user) return;
+    setLoading(true);
+
+    try {
+      // Upsert data linked to the user's ID
+      const { error } = await supabase
+        .from('user_data')
+        .upsert({ 
+          user_id: user.id, 
+          content: data,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'user_id' });
+
+      if (error) throw error;
+      flashMsg('Data saved to cloud successfully!', 'success');
+    } catch (err: any) {
+      console.error(err);
+      flashMsg(err.message || 'Failed to sync to cloud', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePullFromCloud = async () => {
+    if (!supabase || !user) return;
+    setLoading(true);
+
+    try {
+      const { data: rows, error } = await supabase
+        .from('user_data')
+        .select('content')
+        .eq('user_id', user.id)
+        .single();
+
+      if (error) throw error;
+
+      if (rows && rows.content) {
+         if (confirm('This will overwrite your local data with the version from the cloud. Are you sure?')) {
+             validateAndImport(rows.content);
+         }
+      } else {
+        flashMsg('No data found in cloud.', 'info');
+      }
+    } catch (err: any) {
+      console.error(err);
+      flashMsg(err.message || 'Failed to fetch from cloud', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // --- LOCAL METHODS ---
 
   const handleCopyToClipboard = async () => {
     try {
@@ -33,7 +140,6 @@ export const BackupManager: React.FC<BackupManagerProps> = ({ data, onImport }) 
     try {
       const text = await navigator.clipboard.readText();
       if (!text) return;
-      
       try {
         const json = JSON.parse(text);
         validateAndImport(json);
@@ -45,73 +151,10 @@ export const BackupManager: React.FC<BackupManagerProps> = ({ data, onImport }) 
     }
   };
 
-  // --- File System API (Modern Browsers) ---
-
-  const handleNativeSave = async () => {
-    if ('showSaveFilePicker' in window) {
-      try {
-        // @ts-ignore - File System Access API
-        const handle = await window.showSaveFilePicker({
-          suggestedName: `focus_backup_${new Date().toISOString().split('T')[0]}.json`,
-          types: [{
-            description: 'JSON Files',
-            accept: { 'application/json': ['.json'] },
-          }],
-        });
-        const writable = await handle.createWritable();
-        await writable.write(JSON.stringify(data, null, 2));
-        await writable.close();
-        flashMsg("Saved to file successfully!");
-        return;
-      } catch (err: any) {
-        if (err.name !== 'AbortError') {
-          console.error(err);
-          // If native save fails (e.g. not supported), use fallback
-          fallbackExport();
-        } else {
-            return; // User cancelled
-        }
-      }
-    } else {
-      // Fallback
-      fallbackExport();
-    }
-  };
-
-  const handleNativeOpen = async () => {
-    if ('showOpenFilePicker' in window) {
-      try {
-        // @ts-ignore
-        const [handle] = await window.showOpenFilePicker({
-          types: [{
-            description: 'JSON Files',
-            accept: { 'application/json': ['.json'] },
-          }],
-        });
-        const file = await handle.getFile();
-        const text = await file.text();
-        const json = JSON.parse(text);
-        validateAndImport(json);
-        return;
-      } catch (err: any) {
-        if (err.name !== 'AbortError') {
-          console.error(err);
-          flashMsg("Failed to open file", 'error');
-        }
-        return;
-      }
-    }
-    // Fallback
-    fileInputRef.current?.click();
-  };
-
-  // --- Legacy Fallbacks ---
-
   const fallbackExport = () => {
     const jsonString = JSON.stringify(data, null, 2);
     const blob = new Blob([jsonString], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    
     const a = document.createElement('a');
     a.href = url;
     a.download = `focus_backup_${new Date().toISOString().split('T')[0]}.json`;
@@ -125,7 +168,6 @@ export const BackupManager: React.FC<BackupManagerProps> = ({ data, onImport }) 
   const handleLegacyFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
@@ -139,14 +181,10 @@ export const BackupManager: React.FC<BackupManagerProps> = ({ data, onImport }) 
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // --- Validation ---
-
   const validateAndImport = (json: any) => {
     if (json && Array.isArray(json.history) && typeof json.chainCount === 'number') {
-      if (confirm('This will overwrite your current data with the imported version. Continue?')) {
-        onImport(json);
-        flashMsg("Data imported successfully!");
-      }
+      onImport(json);
+      flashMsg("Data imported successfully!");
     } else {
       flashMsg("Invalid data format", 'error');
     }
@@ -154,68 +192,92 @@ export const BackupManager: React.FC<BackupManagerProps> = ({ data, onImport }) 
 
   return (
     <div className="mt-12 pt-8 border-t border-white/5">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6">
         
-        {/* Left: Info */}
-        <div className="text-gray-500 text-sm max-w-xs">
+        {/* INFO COLUMN */}
+        <div className="lg:col-span-4 text-gray-500 text-sm">
           <h4 className="text-white font-medium mb-1 flex items-center gap-2">
-            <span>💾</span> Data Sync
+            <span>💾</span> Data Management
           </h4>
           <p className="mb-2">
-            Data is stored in browser <strong>LocalStorage</strong>. It will be lost if you clear browser data.
+            By default, data lives in <strong>LocalStorage</strong>. Clear your cache, and it's gone.
           </p>
-          <p className="text-xs text-indigo-400">
-             To survive cache clearing, please download a backup file regularly.
+          <p className="text-xs text-indigo-400 mb-4">
+             Use Cloud Sync to persist data across devices.
           </p>
+          
           {msg && (
-            <div className={`mt-2 text-xs font-bold ${msg.type === 'success' ? 'text-emerald-400' : 'text-red-400'} animate-pulse`}>
+            <div className={`
+                mt-2 text-xs font-bold px-3 py-2 rounded border
+                ${msg.type === 'success' ? 'bg-emerald-900/20 border-emerald-500/50 text-emerald-400' : ''}
+                ${msg.type === 'error' ? 'bg-red-900/20 border-red-500/50 text-red-400' : ''}
+                ${msg.type === 'info' ? 'bg-blue-900/20 border-blue-500/50 text-blue-400' : ''}
+            `}>
               {msg.text}
             </div>
           )}
         </div>
 
-        {/* Right: Actions */}
-        <div className="flex flex-col gap-4 w-full md:w-auto">
-          
-          <div className="flex flex-col sm:flex-row gap-3">
-             {/* Clipboard */}
-             <div className="flex flex-col gap-2 p-3 rounded-xl bg-zinc-900 border border-white/5 flex-1">
-                <span className="text-[10px] uppercase tracking-wider text-gray-500 font-bold px-1">Quick Sync</span>
-                <div className="flex gap-2">
-                  <Button variant="secondary" size="sm" onClick={handleCopyToClipboard} className="flex-1 whitespace-nowrap">
-                    Copy
-                  </Button>
-                  <Button variant="secondary" size="sm" onClick={handlePasteFromClipboard} className="flex-1 whitespace-nowrap">
-                    Paste
-                  </Button>
+        {/* LOCAL ACTIONS */}
+        <div className="lg:col-span-4 flex flex-col gap-3">
+             <div className="flex flex-col gap-2 p-4 rounded-xl bg-zinc-900 border border-white/5 h-full">
+                <span className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">Local File / Clipboard</span>
+                
+                <div className="grid grid-cols-2 gap-2 mt-auto">
+                  <Button variant="secondary" size="sm" onClick={handleCopyToClipboard}>Copy JSON</Button>
+                  <Button variant="secondary" size="sm" onClick={handlePasteFromClipboard}>Paste JSON</Button>
+                  <Button variant="secondary" size="sm" onClick={fallbackExport}>Download</Button>
+                  <div className="relative">
+                    <input type="file" ref={fileInputRef} onChange={handleLegacyFileChange} accept=".json" className="hidden" />
+                    <Button variant="secondary" size="sm" className="w-full" onClick={() => fileInputRef.current?.click()}>Import File</Button>
+                  </div>
                 </div>
-              </div>
+             </div>
+        </div>
 
-              {/* File System */}
-              <div className="flex flex-col gap-2 p-3 rounded-xl bg-zinc-900 border border-white/5 flex-1">
-                 <span className="text-[10px] uppercase tracking-wider text-gray-500 font-bold px-1">Backup File</span>
-                 <div className="flex gap-2">
-                    <input 
-                      type="file" 
-                      ref={fileInputRef} 
-                      onChange={handleLegacyFileChange} 
-                      accept=".json" 
-                      className="hidden" 
-                    />
-                    <Button variant="secondary" size="sm" onClick={handleNativeOpen} className="whitespace-nowrap">
-                      Open
-                    </Button>
-                    <Button variant="secondary" size="sm" onClick={handleNativeSave} className="whitespace-nowrap">
-                      Save / Sync
-                    </Button>
-                    {/* Explicit Download for safety */}
-                    <Button variant="secondary" size="sm" onClick={fallbackExport} className="whitespace-nowrap" title="Force Download">
-                      ⬇
-                    </Button>
+        {/* CLOUD ACTIONS */}
+        <div className="lg:col-span-4">
+            <div className="flex flex-col gap-2 p-4 rounded-xl bg-zinc-900 border border-indigo-500/20 h-full relative overflow-hidden">
+                 {/* Decorative background */}
+                 <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-2xl pointer-events-none -mr-10 -mt-10"></div>
+                 
+                 <div className="flex justify-between items-center relative z-10">
+                    <span className="text-[10px] uppercase tracking-wider text-indigo-400 font-bold">☁️ Cloud Sync (Supabase)</span>
+                    {user && <span className="text-[9px] text-gray-500">{user.email}</span>}
                  </div>
-              </div>
-          </div>
-          
+
+                 {!isClientReady ? (
+                    <div className="mt-auto text-xs text-gray-500 italic">
+                        Missing API Keys. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to .env to enable.
+                    </div>
+                 ) : !user ? (
+                    <form onSubmit={handleLogin} className="mt-auto flex gap-2">
+                        <input 
+                            type="email" 
+                            placeholder="email@example.com"
+                            value={email}
+                            onChange={e => setEmail(e.target.value)}
+                            className="flex-1 bg-black border border-white/10 rounded px-3 py-1 text-xs text-white focus:border-indigo-500 outline-none"
+                            required
+                        />
+                        <Button type="submit" size="sm" variant="primary" disabled={loading}>
+                            {loading ? '...' : 'Login'}
+                        </Button>
+                    </form>
+                 ) : (
+                     <div className="mt-auto grid grid-cols-2 gap-2">
+                        <Button variant="primary" size="sm" onClick={handlePushToCloud} disabled={loading}>
+                            ⬆ Push
+                        </Button>
+                        <Button variant="secondary" size="sm" onClick={handlePullFromCloud} disabled={loading}>
+                            ⬇ Pull
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={handleLogout} className="col-span-2 text-xs">
+                            Sign Out
+                        </Button>
+                     </div>
+                 )}
+            </div>
         </div>
       </div>
     </div>

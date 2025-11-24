@@ -1,9 +1,5 @@
-
 import { useState, useEffect } from 'react';
-import { v4 as uuidv4 } from 'uuid'; 
-
-const generateId = uuidv4;
-
+import { v4 as uuidv4 } from 'uuid';
 import { AppState, FocusSession, ExceptionRule, STORAGE_KEY, SacredSeatData } from './types';
 import { FocusController } from './components/FocusController';
 import { TimeHorizon } from './components/TimeHorizon';
@@ -11,6 +7,8 @@ import { StatsBoard } from './components/StatsBoard';
 import { BackupManager } from './components/BackupManager';
 import { BookingModal } from './components/BookingModal';
 import { SessionDetailModal } from './components/SessionDetailModal';
+
+const generateId = uuidv4;
 
 const INITIAL_DATA: SacredSeatData = {
   chainCount: 0,
