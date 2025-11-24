@@ -377,7 +377,7 @@ export const BackupManager: React.FC<BackupManagerProps> = ({ data, onImport }) 
                  {showHelp ? (
                     <div className="mt-2 flex flex-col h-full z-20 overflow-y-auto hide-scrollbar">
                         <p className="text-[10px] text-gray-400 mb-1 font-bold">1. Auth Setup (Redirects)</p>
-                        <p className="text-[8px] text-gray-500 mb-1">Add this URL to Supabase > Auth > URL Config > Redirect URLs</p>
+                        <p className="text-[8px] text-gray-500 mb-1">Add this URL to Supabase &gt; Auth &gt; URL Config &gt; Redirect URLs</p>
                         <div className="flex gap-1 mb-3">
                            <input readOnly value={window.location.origin} className="flex-1 bg-black border border-white/10 text-[8px] px-1 py-0.5 text-gray-300 rounded" />
                            <button onClick={() => navigator.clipboard.writeText(window.location.origin)} className="text-[8px] bg-white/10 px-2 rounded text-gray-300">Copy</button>
