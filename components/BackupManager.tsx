@@ -9,9 +9,27 @@ interface BackupManagerProps {
   onImport: (data: SacredSeatData) => void;
 }
 
+const SQL_SNIPPET = `-- 1. Go to Supabase > SQL Editor
+-- 2. Run this script to create the table
+create table if not exists user_data (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users not null,
+  content jsonb not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  unique(user_id)
+);
+
+alter table user_data enable row level security;
+
+create policy "Users can manage their own data" 
+on user_data 
+for all 
+using (auth.uid() = user_id);`;
+
 export const BackupManager: React.FC<BackupManagerProps> = ({ data, onImport }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [msg, setMsg] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const [showHelp, setShowHelp] = useState(false);
   
   // Auth State
   const [user, setUser] = useState<User | null>(null);
@@ -21,7 +39,8 @@ export const BackupManager: React.FC<BackupManagerProps> = ({ data, onImport }) 
 
   // Config State (for manual entry)
   const [configUrl, setConfigUrl] = useState('');
-  const [configKey, setConfigKey] = useState('');
+  // Pre-filled with the key provided by the user
+  const [configKey, setConfigKey] = useState('sb_publishable_zT2QCektJ4NR-G405EL5Ow_jtS1G15B');
 
   // Initialize Supabase Auth Listener
   useEffect(() => {
@@ -94,7 +113,12 @@ export const BackupManager: React.FC<BackupManagerProps> = ({ data, onImport }) 
       flashMsg('Data saved to cloud successfully!', 'success');
     } catch (err: any) {
       console.error(err);
-      flashMsg(err.message || 'Failed to sync to cloud', 'error');
+      if (err.message?.includes('relation "user_data" does not exist')) {
+          flashMsg('Table missing. Check Help (?) for SQL setup.', 'error');
+          setShowHelp(true);
+      } else {
+          flashMsg(err.message || 'Failed to sync to cloud', 'error');
+      }
     } finally {
       setLoading(false);
     }
@@ -122,7 +146,12 @@ export const BackupManager: React.FC<BackupManagerProps> = ({ data, onImport }) 
       }
     } catch (err: any) {
       console.error(err);
-      flashMsg(err.message || 'Failed to fetch from cloud', 'error');
+       if (err.message?.includes('relation "user_data" does not exist')) {
+          flashMsg('Table missing. Check Help (?) for SQL setup.', 'error');
+          setShowHelp(true);
+      } else {
+          flashMsg(err.message || 'Failed to fetch from cloud', 'error');
+      }
     } finally {
       setLoading(false);
     }
@@ -268,33 +297,57 @@ export const BackupManager: React.FC<BackupManagerProps> = ({ data, onImport }) 
                  
                  <div className="flex justify-between items-center relative z-10">
                     <span className="text-[10px] uppercase tracking-wider text-indigo-400 font-bold">☁️ Cloud Sync (Supabase)</span>
-                    {user && <span className="text-[9px] text-gray-500">{user.email}</span>}
+                    <div className="flex items-center gap-2">
+                       {user && <span className="text-[9px] text-gray-500">{user.email}</span>}
+                       {isClientReady && (
+                           <button 
+                             onClick={() => setShowHelp(!showHelp)} 
+                             className="text-gray-500 hover:text-white text-xs w-5 h-5 rounded border border-white/10 flex items-center justify-center"
+                             title="Database Setup / Help"
+                           >
+                             ?
+                           </button>
+                       )}
+                    </div>
                  </div>
                  
                  {/* Disconnect / Clear Config Button */}
-                 {isClientReady && (
+                 {isClientReady && !showHelp && (
                    <button 
                       onClick={handleClearConfig}
-                      className="absolute top-4 right-4 text-gray-600 hover:text-red-400 opacity-0 group-hover/card:opacity-100 transition-opacity z-20"
+                      className="absolute top-4 right-10 text-gray-600 hover:text-red-400 opacity-0 group-hover/card:opacity-100 transition-opacity z-20 mr-2"
                       title="Disconnect / Clear API Keys"
                    >
                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                    </button>
                  )}
 
-                 {!isClientReady ? (
+                 {showHelp ? (
+                    <div className="mt-2 flex flex-col h-full z-20">
+                        <p className="text-[10px] text-gray-400 mb-1">Database Setup (Run in SQL Editor):</p>
+                        <pre className="flex-1 bg-black p-2 rounded text-[8px] text-gray-300 overflow-auto font-mono border border-white/10 select-all">
+                            {SQL_SNIPPET}
+                        </pre>
+                        <Button size="sm" variant="secondary" className="mt-2" onClick={() => setShowHelp(false)}>Back</Button>
+                    </div>
+                 ) : !isClientReady ? (
                     <div className="mt-auto flex flex-col gap-2">
                         <div className="text-xs text-gray-500 mb-1">
                             Configure Supabase credentials to enable cloud sync.
                         </div>
                         <form onSubmit={handleSaveConfig} className="flex flex-col gap-2">
-                             <input 
-                                type="text"
-                                placeholder="Project URL (https://xyz.supabase.co)"
-                                value={configUrl}
-                                onChange={e => setConfigUrl(e.target.value)}
-                                className="bg-black/50 border border-white/10 rounded px-2 py-1.5 text-[10px] text-white focus:border-indigo-500 outline-none"
-                             />
+                             <div className="flex flex-col gap-1">
+                               <input 
+                                  type="text"
+                                  placeholder="Project URL (https://xyz.supabase.co)"
+                                  value={configUrl}
+                                  onChange={e => setConfigUrl(e.target.value)}
+                                  className="bg-black/50 border border-white/10 rounded px-2 py-1.5 text-[10px] text-white focus:border-indigo-500 outline-none w-full"
+                               />
+                               <a href="https://supabase.com/dashboard/project/_/settings/api" target="_blank" rel="noopener noreferrer" className="text-[9px] text-indigo-400 hover:underline text-right px-1">
+                                  Find your Project URL &rarr;
+                               </a>
+                             </div>
                              <input 
                                 type="password"
                                 placeholder="Anon Key / API Key"
@@ -308,19 +361,24 @@ export const BackupManager: React.FC<BackupManagerProps> = ({ data, onImport }) 
                         </form>
                     </div>
                  ) : !user ? (
-                    <form onSubmit={handleLogin} className="mt-auto flex gap-2">
-                        <input 
-                            type="email" 
-                            placeholder="email@example.com"
-                            value={email}
-                            onChange={e => setEmail(e.target.value)}
-                            className="flex-1 bg-black border border-white/10 rounded px-3 py-1 text-xs text-white focus:border-indigo-500 outline-none"
-                            required
-                        />
-                        <Button type="submit" size="sm" variant="primary" disabled={loading}>
-                            {loading ? '...' : 'Login'}
-                        </Button>
-                    </form>
+                    <div className="mt-auto flex flex-col gap-2">
+                        <div className="text-xs text-gray-500 leading-tight">
+                            Enter your email to receive a magic login link.
+                        </div>
+                        <form onSubmit={handleLogin} className="flex gap-2">
+                            <input 
+                                type="email" 
+                                placeholder="email@example.com"
+                                value={email}
+                                onChange={e => setEmail(e.target.value)}
+                                className="flex-1 bg-black border border-white/10 rounded px-3 py-1 text-xs text-white focus:border-indigo-500 outline-none"
+                                required
+                            />
+                            <Button type="submit" size="sm" variant="primary" disabled={loading}>
+                                {loading ? '...' : 'Login'}
+                            </Button>
+                        </form>
+                    </div>
                  ) : (
                      <div className="mt-auto grid grid-cols-2 gap-2">
                         <Button variant="primary" size="sm" onClick={handlePushToCloud} disabled={loading}>
