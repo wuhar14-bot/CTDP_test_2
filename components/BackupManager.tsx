@@ -81,11 +81,14 @@ export const BackupManager: React.FC<BackupManagerProps> = ({ data, onImport }) 
     if (!supabase) return;
     
     setLoading(true);
+    
+    // Use clean URL (origin + pathname) to avoid stacking hashes/params
+    const redirectTo = `${window.location.origin}${window.location.pathname}`;
+
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        // Redirect back to the current page after login
-        emailRedirectTo: window.location.href,
+        emailRedirectTo: redirectTo,
       }
     });
 
@@ -438,7 +441,7 @@ export const BackupManager: React.FC<BackupManagerProps> = ({ data, onImport }) 
                         {/* MANUAL LOGIN FALLBACK */}
                         <div className="text-center">
                             <button onClick={() => setShowManualLogin(!showManualLogin)} className="text-[9px] text-gray-500 hover:text-gray-300 underline decoration-dotted">
-                                Link didn't open? (Port/Redirect Error)
+                                Link didn't open? (Manual Token)
                             </button>
                         </div>
                         
