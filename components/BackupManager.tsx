@@ -41,9 +41,13 @@ export const BackupManager: React.FC<BackupManagerProps> = ({ data, onImport }) 
   const [loading, setLoading] = useState(false);
   const [isClientReady, setIsClientReady] = useState(false);
 
+  // Manual Token Entry State
+  const [showManualLogin, setShowManualLogin] = useState(false);
+  const [manualHash, setManualHash] = useState('');
+
   // Config State (for manual entry)
-  const [configUrl, setConfigUrl] = useState('');
-  // Pre-filled with the key provided by the user
+  // Pre-filled with user's project details
+  const [configUrl, setConfigUrl] = useState('https://yiopchxqunoyiakaalgd.supabase.co');
   const [configKey, setConfigKey] = useState('sb_publishable_zT2QCektJ4NR-G405EL5Ow_jtS1G15B');
 
   // Initialize Supabase Auth Listener
@@ -91,6 +95,47 @@ export const BackupManager: React.FC<BackupManagerProps> = ({ data, onImport }) 
       flashMsg('Check your email for the login link!', 'info');
     }
     setLoading(false);
+  };
+
+  const handleManualLogin = async () => {
+    if (!manualHash || !supabase) return;
+    setLoading(true);
+    
+    try {
+        // Extract hash if full URL provided (everything after #)
+        let hash = manualHash;
+        if (manualHash.includes('#')) {
+            hash = manualHash.substring(manualHash.indexOf('#') + 1);
+        }
+        
+        // Parse parameters
+        const params = new URLSearchParams(hash);
+        const access_token = params.get('access_token');
+        const refresh_token = params.get('refresh_token');
+        
+        if (!access_token || !refresh_token) {
+             throw new Error("Invalid URL. Make sure to copy the entire link including '#access_token=...'");
+        }
+
+        const { data, error } = await supabase.auth.setSession({
+            access_token,
+            refresh_token,
+        });
+        
+        if (error) throw error;
+        
+        if (data.session) {
+            setUser(data.session.user);
+            flashMsg("Login successful via manual token!", 'success');
+            setShowManualLogin(false);
+            setManualHash('');
+        }
+    } catch (err: any) {
+        console.error(err);
+        flashMsg(err.message || "Failed to verify token", 'error');
+    } finally {
+        setLoading(false);
+    }
   };
 
   const handleLogout = async () => {
@@ -327,16 +372,23 @@ export const BackupManager: React.FC<BackupManagerProps> = ({ data, onImport }) 
                  )}
 
                  {showHelp ? (
-                    <div className="mt-2 flex flex-col h-full z-20">
-                        <p className="text-[10px] text-gray-400 mb-1">Database Setup (Run in SQL Editor):</p>
-                        <pre className="flex-1 bg-black p-2 rounded text-[8px] text-gray-300 overflow-auto font-mono border border-white/10 select-all">
+                    <div className="mt-2 flex flex-col h-full z-20 overflow-y-auto hide-scrollbar">
+                        <p className="text-[10px] text-gray-400 mb-1 font-bold">1. Auth Setup (Redirects)</p>
+                        <p className="text-[8px] text-gray-500 mb-1">Add this URL to Supabase > Auth > URL Config > Redirect URLs</p>
+                        <div className="flex gap-1 mb-3">
+                           <input readOnly value={window.location.origin} className="flex-1 bg-black border border-white/10 text-[8px] px-1 py-0.5 text-gray-300 rounded" />
+                           <button onClick={() => navigator.clipboard.writeText(window.location.origin)} className="text-[8px] bg-white/10 px-2 rounded text-gray-300">Copy</button>
+                        </div>
+
+                        <p className="text-[10px] text-gray-400 mb-1 font-bold">2. Database Setup (SQL Editor)</p>
+                        <pre className="bg-black p-2 rounded text-[8px] text-gray-300 font-mono border border-white/10 select-all whitespace-pre-wrap">
                             {SQL_SNIPPET}
                         </pre>
-                        <Button size="sm" variant="secondary" className="mt-2" onClick={() => setShowHelp(false)}>Back</Button>
+                        <Button size="sm" variant="secondary" className="mt-2 sticky bottom-0" onClick={() => setShowHelp(false)}>Back</Button>
                     </div>
                  ) : !isClientReady ? (
                     <div className="mt-auto flex flex-col gap-2">
-                        <div className="text-xs text-gray-500 mb-1">
+                        <div className="text-xs text-gray-500">
                             Configure Supabase credentials to enable cloud sync.
                         </div>
                         <form onSubmit={handleSaveConfig} className="flex flex-col gap-2">
@@ -382,6 +434,28 @@ export const BackupManager: React.FC<BackupManagerProps> = ({ data, onImport }) 
                                 {loading ? '...' : 'Login'}
                             </Button>
                         </form>
+                        
+                        {/* MANUAL LOGIN FALLBACK */}
+                        <div className="text-center">
+                            <button onClick={() => setShowManualLogin(!showManualLogin)} className="text-[9px] text-gray-500 hover:text-gray-300 underline decoration-dotted">
+                                Link didn't open? (Port/Redirect Error)
+                            </button>
+                        </div>
+                        
+                        {showManualLogin && (
+                            <div className="animate-in fade-in slide-in-from-top-2 border-t border-white/5 pt-2">
+                                <p className="text-[9px] text-gray-500 mb-1">Paste the full URL from the broken page:</p>
+                                <textarea
+                                    value={manualHash}
+                                    onChange={(e) => setManualHash(e.target.value)}
+                                    placeholder="http://localhost:3000/#access_token=..."
+                                    className="w-full bg-black/50 border border-white/10 rounded p-2 text-[9px] text-gray-300 h-16 mb-2 focus:border-indigo-500 outline-none"
+                                />
+                                <Button size="sm" variant="secondary" onClick={handleManualLogin} className="w-full h-7 text-xs" disabled={!manualHash}>
+                                    Verify Token
+                                </Button>
+                            </div>
+                        )}
                     </div>
                  ) : (
                      <div className="mt-auto grid grid-cols-2 gap-2">
