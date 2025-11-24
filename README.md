@@ -1,11 +1,23 @@
-<div align="center">
+# Focus CTDP Tracker
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+A high-performance focus tracker based on Chained Time-Delay Protocol with visual analytics.
 
-  <h1>Built with AI Studio</h2>
+## How to Run Locally
 
-  <p>The fastest path from prompt to production with Gemini.</p>
+1.  **Install Node.js**: Ensure you have Node.js installed on your computer.
+2.  **Install Dependencies**: Run the following command in the project root:
+    ```bash
+    npm install
+    ```
+3.  **Start Development Server**:
+    ```bash
+    npm run dev
+    ```
+4.  **Open in Browser**: Click the link shown in the terminal (usually `http://localhost:5173`).
 
-  <a href="https://aistudio.google.com/apps">Start building</a>
+## Technologies
 
-</div>
+*   React
+*   TypeScript
+*   Tailwind CSS (via CDN for portability, config in index.html)
+*   Vite
