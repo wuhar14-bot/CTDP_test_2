@@ -11,6 +11,7 @@ interface BackupManagerProps {
 
 const SQL_SNIPPET = `-- 1. Go to Supabase > SQL Editor
 -- 2. Run this script to create the table
+
 create table if not exists user_data (
   id uuid default gen_random_uuid() primary key,
   user_id uuid references auth.users not null,
@@ -20,6 +21,9 @@ create table if not exists user_data (
 );
 
 alter table user_data enable row level security;
+
+-- Safely recreate policy
+drop policy if exists "Users can manage their own data" on user_data;
 
 create policy "Users can manage their own data" 
 on user_data 
