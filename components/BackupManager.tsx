@@ -19,6 +19,10 @@ export const BackupManager: React.FC<BackupManagerProps> = ({ data, onImport }) 
   const [loading, setLoading] = useState(false);
   const [isClientReady, setIsClientReady] = useState(false);
 
+  // Config State (for manual entry)
+  const [configUrl, setConfigUrl] = useState('');
+  const [configKey, setConfigKey] = useState('');
+
   // Initialize Supabase Auth Listener
   useEffect(() => {
     if (supabase) {
@@ -121,6 +125,27 @@ export const BackupManager: React.FC<BackupManagerProps> = ({ data, onImport }) 
       flashMsg(err.message || 'Failed to fetch from cloud', 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // --- CONFIG METHODS ---
+
+  const handleSaveConfig = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!configUrl.trim() || !configKey.trim()) {
+       flashMsg('Please provide both URL and Key', 'error');
+       return;
+    }
+    localStorage.setItem('sb_url', configUrl.trim());
+    localStorage.setItem('sb_key', configKey.trim());
+    window.location.reload();
+  };
+
+  const handleClearConfig = () => {
+    if (confirm('Disconnect Supabase? This will remove your keys from local storage.')) {
+        localStorage.removeItem('sb_url');
+        localStorage.removeItem('sb_key');
+        window.location.reload();
     }
   };
 
@@ -237,7 +262,7 @@ export const BackupManager: React.FC<BackupManagerProps> = ({ data, onImport }) 
 
         {/* CLOUD ACTIONS */}
         <div className="lg:col-span-4">
-            <div className="flex flex-col gap-2 p-4 rounded-xl bg-zinc-900 border border-indigo-500/20 h-full relative overflow-hidden">
+            <div className="flex flex-col gap-2 p-4 rounded-xl bg-zinc-900 border border-indigo-500/20 h-full relative overflow-hidden group/card">
                  {/* Decorative background */}
                  <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-2xl pointer-events-none -mr-10 -mt-10"></div>
                  
@@ -245,10 +270,42 @@ export const BackupManager: React.FC<BackupManagerProps> = ({ data, onImport }) 
                     <span className="text-[10px] uppercase tracking-wider text-indigo-400 font-bold">☁️ Cloud Sync (Supabase)</span>
                     {user && <span className="text-[9px] text-gray-500">{user.email}</span>}
                  </div>
+                 
+                 {/* Disconnect / Clear Config Button */}
+                 {isClientReady && (
+                   <button 
+                      onClick={handleClearConfig}
+                      className="absolute top-4 right-4 text-gray-600 hover:text-red-400 opacity-0 group-hover/card:opacity-100 transition-opacity z-20"
+                      title="Disconnect / Clear API Keys"
+                   >
+                     <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                   </button>
+                 )}
 
                  {!isClientReady ? (
-                    <div className="mt-auto text-xs text-gray-500 italic">
-                        Missing API Keys. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to .env to enable.
+                    <div className="mt-auto flex flex-col gap-2">
+                        <div className="text-xs text-gray-500 mb-1">
+                            Configure Supabase credentials to enable cloud sync.
+                        </div>
+                        <form onSubmit={handleSaveConfig} className="flex flex-col gap-2">
+                             <input 
+                                type="text"
+                                placeholder="Project URL (https://xyz.supabase.co)"
+                                value={configUrl}
+                                onChange={e => setConfigUrl(e.target.value)}
+                                className="bg-black/50 border border-white/10 rounded px-2 py-1.5 text-[10px] text-white focus:border-indigo-500 outline-none"
+                             />
+                             <input 
+                                type="password"
+                                placeholder="Anon Key / API Key"
+                                value={configKey}
+                                onChange={e => setConfigKey(e.target.value)}
+                                className="bg-black/50 border border-white/10 rounded px-2 py-1.5 text-[10px] text-white focus:border-indigo-500 outline-none"
+                             />
+                             <Button type="submit" size="sm" variant="secondary" className="w-full">
+                                Connect
+                             </Button>
+                        </form>
                     </div>
                  ) : !user ? (
                     <form onSubmit={handleLogin} className="mt-auto flex gap-2">
