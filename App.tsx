@@ -1,19 +1,22 @@
+
 import { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { AppState, FocusSession, ExceptionRule, STORAGE_KEY, SacredSeatData } from './types';
+import { AppState, FocusSession, ExceptionRule, STORAGE_KEY, SacredSeatData, NodeLayout } from './types';
 import { FocusController } from './components/FocusController';
 import { TimeHorizon } from './components/TimeHorizon';
 import { StatsBoard } from './components/StatsBoard';
 import { BackupManager } from './components/BackupManager';
 import { BookingModal } from './components/BookingModal';
 import { SessionDetailModal } from './components/SessionDetailModal';
+import { MindMapBoard } from './components/MindMapBoard';
 
 const generateId = uuidv4;
 
 const INITIAL_DATA: SacredSeatData = {
   chainCount: 0,
   history: [],
-  rules: []
+  rules: [],
+  mindMapLayout: {}
 };
 
 const INITIAL_STATE: AppState = {
@@ -45,6 +48,8 @@ export default function App() {
       try {
         const parsed = JSON.parse(saved);
         if (!parsed.data) parsed.data = INITIAL_DATA;
+        // Migration: Ensure mindMapLayout exists
+        if (!parsed.data.mindMapLayout) parsed.data.mindMapLayout = {};
         setState(parsed);
       } catch (e) {
         console.error("Failed to load state", e);
@@ -171,6 +176,20 @@ export default function App() {
     setDetailModalOpen(true);
   };
 
+  // --- Mind Map Actions ---
+
+  const handleOpenMindMap = () => {
+    setState(prev => ({ ...prev, stage: 'MINDMAP' }));
+  };
+
+  const handleCloseMindMap = () => {
+    setState(prev => ({ ...prev, stage: 'IDLE' }));
+  };
+
+  const handleUpdateLayout = (newLayout: Record<string, NodeLayout>) => {
+    updateData(d => ({ ...d, mindMapLayout: newLayout }));
+  };
+
   // --- Rule & Data Mgmt ---
 
   const addRule = (text: string) => {
@@ -195,6 +214,20 @@ export default function App() {
   };
 
   if (!loaded) return <div className="min-h-screen bg-black text-white flex items-center justify-center">Loading...</div>;
+
+  // --- RENDER: MIND MAP STAGE ---
+  if (state.stage === 'MINDMAP') {
+    return (
+      <MindMapBoard
+        sessions={state.data.history}
+        layout={state.data.mindMapLayout || {}}
+        onUpdateLayout={handleUpdateLayout}
+        onClose={handleCloseMindMap}
+      />
+    );
+  }
+
+  // --- RENDER: NORMAL STAGE ---
 
   return (
     <div className="min-h-screen bg-black text-white p-4 md:p-6 font-sans selection:bg-indigo-500/30">
@@ -242,6 +275,7 @@ export default function App() {
                 onCancel={cancelSession}
                 onAddRule={addRule}
                 onDeleteRule={deleteRule}
+                onOpenMindMap={handleOpenMindMap}
               />
           </div>
         ) : (
@@ -263,6 +297,7 @@ export default function App() {
                 onCancel={cancelSession}
                 onAddRule={addRule}
                 onDeleteRule={deleteRule}
+                onOpenMindMap={handleOpenMindMap}
               />
               
               {/* Tip Card */}
