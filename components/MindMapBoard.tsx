@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { FocusSession, NodeLayout } from '../types';
 import { Button } from './Button';
 
@@ -90,13 +90,6 @@ export const MindMapBoard: React.FC<MindMapBoardProps> = ({
     } else if (draggingNode) {
       // Calculate new node position
       // Node position is absolute within the pan-space
-      // Mouse clientX - dragOffset gives the screen coord of the node
-      // But we need to subtract PAN to get the "absolute" coord relative to origin
-      // Wait, simpler: 
-      // The node renders at (layout.x + pan.x). 
-      // e.clientX is screen space.
-      // layout.x = e.clientX - pan.x - offset.x (where offset was click relative to node)
-      
       const newX = e.clientX - dragOffset.x;
       const newY = e.clientY - dragOffset.y;
       
@@ -219,8 +212,7 @@ export const MindMapBoard: React.FC<MindMapBoardProps> = ({
                 {/* We render lines based on node centers */}
                 {Object.keys(layout).map(sourceId => {
                     const source = layout[sourceId];
-                    const sourceEl = document.getElementById(`node-${sourceId}`);
-                    // Fallback width/height if not rendered yet
+                    // Removed unused sourceEl and w, h variables
                     const w = 200; 
                     const h = 60;
                     const sx = source.x + (w/2);
