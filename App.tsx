@@ -241,6 +241,23 @@ export default function App() {
     setDetailModalOpen(true);
   };
 
+  const updateSession = (id: string, updates: Partial<FocusSession>) => {
+    // 1. Update Global State
+    updateData(data => ({
+      ...data,
+      history: data.history.map(s => s.id === id ? { ...s, ...updates } : s)
+    }));
+
+    // 2. Update Local Modal State (to reflect changes immediately)
+    setDetailSessions(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
+  };
+
+  const deleteSession = (id: string) => {
+    updateData(data => ({ ...data, history: data.history.filter(s => s.id !== id) }));
+    // Also remove from detail view if open
+    setDetailSessions(prev => prev.filter(s => s.id !== id));
+  };
+
   // --- Rule & Data Mgmt ---
 
   const addRule = (text: string) => {
@@ -269,10 +286,6 @@ export default function App() {
 
   const deleteTodo = (id: string) => {
     updateData(data => ({ ...data, todos: data.todos.filter(t => t.id !== id) }));
-  };
-
-  const deleteSession = (id: string) => {
-    updateData(data => ({ ...data, history: data.history.filter(s => s.id !== id) }));
   };
 
   const importData = (newData: SacredSeatData) => {
@@ -411,6 +424,8 @@ export default function App() {
           title={detailTitle}
           sessions={detailSessions}
           onClose={() => setDetailModalOpen(false)}
+          onUpdateSession={updateSession}
+          onDeleteSession={deleteSession}
         />
       </div>
     </div>
