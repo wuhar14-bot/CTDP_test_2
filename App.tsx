@@ -1,22 +1,61 @@
 
 import { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { AppState, FocusSession, ExceptionRule, STORAGE_KEY, SacredSeatData, NodeLayout } from './types';
+import { AppState, FocusSession, ExceptionRule, STORAGE_KEY, SacredSeatData } from './types';
 import { FocusController } from './components/FocusController';
 import { TimeHorizon } from './components/TimeHorizon';
 import { StatsBoard } from './components/StatsBoard';
 import { BackupManager } from './components/BackupManager';
 import { BookingModal } from './components/BookingModal';
 import { SessionDetailModal } from './components/SessionDetailModal';
-import { MindMapBoard } from './components/MindMapBoard';
 
 const generateId = uuidv4;
 
+// --- DEMO DATA FOR TESTING ---
+const DEMO_ID_1 = 'demo-1';
+const DEMO_ID_2 = 'demo-2';
+const DEMO_ID_3 = 'demo-3';
+const DEMO_ID_4 = 'demo-4';
+
+const DEMO_SESSIONS: FocusSession[] = [
+  {
+    id: DEMO_ID_1,
+    task: 'Research CTDP Protocol',
+    startTime: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(), // 2 days ago
+    endTime: new Date(Date.now() - 1000 * 60 * 60 * 23.5 * 2).toISOString(),
+    durationMinutes: 45,
+    status: 'completed'
+  },
+  {
+    id: DEMO_ID_2,
+    task: 'Draft System Architecture',
+    startTime: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), // 1 day ago
+    endTime: new Date(Date.now() - 1000 * 60 * 60 * 22).toISOString(),
+    durationMinutes: 90,
+    status: 'completed'
+  },
+  {
+    id: DEMO_ID_3,
+    task: 'Setup Supabase Database',
+    startTime: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString(), // 4 hours ago
+    endTime: new Date(Date.now() - 1000 * 60 * 60 * 3.5).toISOString(),
+    durationMinutes: 30,
+    status: 'completed'
+  },
+  {
+    id: DEMO_ID_4,
+    task: 'Implement Authentication',
+    startTime: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), // 2 hours ago
+    endTime: new Date(Date.now() - 1000 * 60 * 60 * 1).toISOString(),
+    durationMinutes: 60,
+    status: 'completed'
+  }
+];
+
 const INITIAL_DATA: SacredSeatData = {
-  chainCount: 0,
-  history: [],
-  rules: [],
-  mindMapLayout: {}
+  chainCount: 4,
+  history: DEMO_SESSIONS,
+  rules: []
 };
 
 const INITIAL_STATE: AppState = {
@@ -48,8 +87,6 @@ export default function App() {
       try {
         const parsed = JSON.parse(saved);
         if (!parsed.data) parsed.data = INITIAL_DATA;
-        // Migration: Ensure mindMapLayout exists
-        if (!parsed.data.mindMapLayout) parsed.data.mindMapLayout = {};
         setState(parsed);
       } catch (e) {
         console.error("Failed to load state", e);
@@ -176,20 +213,6 @@ export default function App() {
     setDetailModalOpen(true);
   };
 
-  // --- Mind Map Actions ---
-
-  const handleOpenMindMap = () => {
-    setState(prev => ({ ...prev, stage: 'MINDMAP' }));
-  };
-
-  const handleCloseMindMap = () => {
-    setState(prev => ({ ...prev, stage: 'IDLE' }));
-  };
-
-  const handleUpdateLayout = (newLayout: Record<string, NodeLayout>) => {
-    updateData(d => ({ ...d, mindMapLayout: newLayout }));
-  };
-
   // --- Rule & Data Mgmt ---
 
   const addRule = (text: string) => {
@@ -214,18 +237,6 @@ export default function App() {
   };
 
   if (!loaded) return <div className="min-h-screen bg-black text-white flex items-center justify-center">Loading...</div>;
-
-  // --- RENDER: MIND MAP STAGE ---
-  if (state.stage === 'MINDMAP') {
-    return (
-      <MindMapBoard
-        sessions={state.data.history}
-        layout={state.data.mindMapLayout || {}}
-        onUpdateLayout={handleUpdateLayout}
-        onClose={handleCloseMindMap}
-      />
-    );
-  }
 
   // --- RENDER: NORMAL STAGE ---
 
@@ -275,7 +286,6 @@ export default function App() {
                 onCancel={cancelSession}
                 onAddRule={addRule}
                 onDeleteRule={deleteRule}
-                onOpenMindMap={handleOpenMindMap}
               />
           </div>
         ) : (
@@ -297,7 +307,6 @@ export default function App() {
                 onCancel={cancelSession}
                 onAddRule={addRule}
                 onDeleteRule={deleteRule}
-                onOpenMindMap={handleOpenMindMap}
               />
               
               {/* Tip Card */}

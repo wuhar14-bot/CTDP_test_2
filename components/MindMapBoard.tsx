@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { FocusSession, NodeLayout } from '../types';
 import { Button } from './Button';
 
@@ -22,152 +22,206 @@ export const MindMapBoard: React.FC<MindMapBoardProps> = ({
 }) => {
   // Filter only completed sessions
   const completedSessions = useMemo(() => sessions.filter(s => s.status !== 'planned'), [sessions]);
-  
-  // State
+
+  // --- REFS FOR STABLE STATE ACCESS IN LISTENERS ---
+  const interactionRef = useRef<{
+    mode: 'IDLE' | 'PAN' | 'DRAG_NODE' | 'LINK';
+    activeId: string | null;
+    startMouse: { x: number, y: number }; // Screen coordinates
+    dragOffset: { x: number, y: number }; // Canvas coordinates offset
+  }>({
+    mode: 'IDLE',
+    activeId: null,
+    startMouse: { x: 0, y: 0 },
+    dragOffset: { x: 0, y: 0 }
+  });
+
+  const panRef = useRef({ x: 0, y: 0 });
+  const zoomRef = useRef(1);
+  const layoutRef = useRef(layout);
+
+  // --- REACT STATE FOR RENDERING ---
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [zoom] = useState(1);
   const [isPanning, setIsPanning] = useState(false);
-  
-  // Dragging Node State
   const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-
-  // Linking State
   const [tempLink, setTempLink] = useState<{ sourceId: string; endX: number; endY: number } | null>(null);
 
-  // Refs
   const boardRef = useRef<HTMLDivElement>(null);
-  const lastMousePos = useRef({ x: 0, y: 0 });
+
+  // Sync refs with state
+  useEffect(() => { panRef.current = pan; }, [pan]);
+  useEffect(() => { zoomRef.current = zoom; }, [zoom]);
+  useEffect(() => { layoutRef.current = layout; }, [layout]);
 
   // Helpers
-  const getNodePos = (id: string) => {
-    return layout[id] || { x: 100, y: 100, connections: [] };
+  const getNodePos = (id: string, currentLayout = layout) => {
+    return currentLayout[id] || { x: 100, y: 100, connections: [] };
   };
 
   const getCanvasCoordinates = (clientX: number, clientY: number) => {
-    // Convert screen coordinates to canvas coordinates accounting for Pan and Zoom
-    // For now we keep zoom at 1 for simplicity, but math is ready
     return {
-      x: (clientX - pan.x) / zoom,
-      y: (clientY - pan.y) / zoom
+      x: (clientX - panRef.current.x) / zoomRef.current,
+      y: (clientY - panRef.current.y) / zoomRef.current
     };
   };
 
-  // --- Event Handlers ---
+  // --- MOUSE HANDLERS (INITIATORS) ---
 
   const handleMouseDownBoard = (e: React.MouseEvent) => {
-    if (e.target === boardRef.current) {
-      setIsPanning(true);
-      lastMousePos.current = { x: e.clientX, y: e.clientY };
-    }
+    // Only allow panning if clicking directly on the board or SVG background
+    if (e.button !== 0) return; // Left click only
+    
+    interactionRef.current = {
+      mode: 'PAN',
+      activeId: null,
+      startMouse: { x: e.clientX, y: e.clientY },
+      dragOffset: { x: 0, y: 0 }
+    };
+    setIsPanning(true);
   };
 
-  // 1. Start Dragging Node
   const handleMouseDownNode = (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
+    if (e.button !== 0) return;
+    e.stopPropagation(); // Stop board pan
+
     const pos = getNodePos(id);
     const mouseCanvas = getCanvasCoordinates(e.clientX, e.clientY);
-    
+
+    interactionRef.current = {
+      mode: 'DRAG_NODE',
+      activeId: id,
+      startMouse: { x: e.clientX, y: e.clientY },
+      dragOffset: {
+        x: mouseCanvas.x - pos.x,
+        y: mouseCanvas.y - pos.y
+      }
+    };
     setDraggingNodeId(id);
-    setDragOffset({
-      x: mouseCanvas.x - pos.x,
-      y: mouseCanvas.y - pos.y
-    });
   };
 
-  // 2. Start Dragging Link (Handle Click)
   const handleMouseDownHandle = (e: React.MouseEvent, sourceId: string) => {
-    e.stopPropagation();
-    const pos = getNodePos(sourceId);
-    
-    // Start the temp link from the handle position (Right side of node)
-    const startX = pos.x + NODE_WIDTH;
-    const startY = pos.y + (NODE_HEIGHT / 2);
-
-    setTempLink({
-      sourceId,
-      endX: startX, // Initially ends at start
-      endY: startY
-    });
-  };
-
-  // 3. Global Mouse Move
-  const handleMouseMove = (e: React.MouseEvent) => {
-    // A. Panning Board
-    if (isPanning) {
-      const dx = e.clientX - lastMousePos.current.x;
-      const dy = e.clientY - lastMousePos.current.y;
-      setPan(p => ({ x: p.x + dx, y: p.y + dy }));
-      lastMousePos.current = { x: e.clientX, y: e.clientY };
-      return;
-    }
+    if (e.button !== 0) return;
+    e.stopPropagation(); // Stop node drag
+    e.preventDefault();  // Prevent text selection
 
     const mouseCanvas = getCanvasCoordinates(e.clientX, e.clientY);
 
-    // B. Dragging Node
-    if (draggingNodeId) {
-      const newX = mouseCanvas.x - dragOffset.x;
-      const newY = mouseCanvas.y - dragOffset.y;
-      
-      onUpdateLayout({
-        ...layout,
-        [draggingNodeId]: {
-            ...getNodePos(draggingNodeId),
-            x: newX,
-            y: newY
+    // Initialize visual line
+    setTempLink({
+      sourceId,
+      endX: mouseCanvas.x,
+      endY: mouseCanvas.y
+    });
+
+    interactionRef.current = {
+      mode: 'LINK',
+      activeId: sourceId,
+      startMouse: { x: e.clientX, y: e.clientY },
+      dragOffset: { x: 0, y: 0 }
+    };
+  };
+
+  // --- GLOBAL LISTENERS ---
+
+  useEffect(() => {
+    const handleGlobalMove = (e: MouseEvent) => {
+      const { mode, activeId, startMouse, dragOffset } = interactionRef.current;
+
+      if (mode === 'IDLE') return;
+
+      if (mode === 'PAN') {
+        const dx = e.clientX - startMouse.x;
+        const dy = e.clientY - startMouse.y;
+        
+        setPan(prev => ({ x: prev.x + dx, y: prev.y + dy }));
+        interactionRef.current.startMouse = { x: e.clientX, y: e.clientY };
+      }
+      else {
+        const mouseCanvas = getCanvasCoordinates(e.clientX, e.clientY);
+
+        if (mode === 'DRAG_NODE' && activeId) {
+            const newX = mouseCanvas.x - dragOffset.x;
+            const newY = mouseCanvas.y - dragOffset.y;
+            
+            // Optimistic update
+            const currentPos = getNodePos(activeId, layoutRef.current);
+            onUpdateLayout({
+                ...layoutRef.current,
+                [activeId]: {
+                    ...currentPos,
+                    x: newX,
+                    y: newY
+                }
+            });
         }
-      });
-      return;
-    }
 
-    // C. Dragging Connection Wire
-    if (tempLink) {
-      setTempLink(prev => prev ? { ...prev, endX: mouseCanvas.x, endY: mouseCanvas.y } : null);
-    }
-  };
+        if (mode === 'LINK' && activeId) {
+            // Directly update tempLink with latest coordinates and activeId
+            setTempLink({
+                sourceId: activeId,
+                endX: mouseCanvas.x,
+                endY: mouseCanvas.y
+            });
+        }
+      }
+    };
 
-  // 4. Global Mouse Up
-  const handleMouseUp = () => {
-    setIsPanning(false);
-    setDraggingNodeId(null);
+    const handleGlobalUp = () => {
+      const { mode } = interactionRef.current;
+      
+      if (mode !== 'IDLE') {
+        interactionRef.current.mode = 'IDLE';
+        interactionRef.current.activeId = null;
 
-    // If we were dragging a link, check if we dropped it on a node
-    if (tempLink) {
-      // Logic handled in handleMouseUpNode, but if we drop here (on empty space), cancel it
-      setTempLink(null);
-    }
-  };
+        setIsPanning(false);
+        setDraggingNodeId(null);
+        setTempLink(null);
+      }
+    };
 
-  // 5. Drop Link on Target Node
-  const handleMouseUpNode = (e: React.MouseEvent, targetId: string) => {
-    if (tempLink && tempLink.sourceId !== targetId) {
-       e.stopPropagation();
-       const sourceNode = getNodePos(tempLink.sourceId);
-       
-       // Avoid duplicates
-       if (!sourceNode.connections.includes(targetId)) {
-          const newLayout = {
-             ...layout,
-             [tempLink.sourceId]: {
-                ...sourceNode,
-                connections: [...sourceNode.connections, targetId]
+    window.addEventListener('mousemove', handleGlobalMove);
+    window.addEventListener('mouseup', handleGlobalUp);
+
+    return () => {
+      window.removeEventListener('mousemove', handleGlobalMove);
+      window.removeEventListener('mouseup', handleGlobalUp);
+    };
+  }, []); // Empty deps = stable listeners
+
+  // --- DROPPING LINK ON NODE ---
+
+  const handleMouseUpNode = (targetId: string) => {
+     // We check interactionRef directly to avoid stale state issues with tempLink
+     if (interactionRef.current.mode === 'LINK' && interactionRef.current.activeId) {
+         const sourceId = interactionRef.current.activeId;
+         
+         // Prevent self-linking and duplicates
+         if (sourceId !== targetId) {
+             const sourceNode = getNodePos(sourceId, layoutRef.current);
+             
+             if (!sourceNode.connections.includes(targetId)) {
+                onUpdateLayout({
+                    ...layoutRef.current,
+                    [sourceId]: {
+                        ...sourceNode,
+                        connections: [...sourceNode.connections, targetId]
+                    }
+                });
              }
-          };
-          onUpdateLayout(newLayout);
-       }
-       setTempLink(null);
-    }
+         }
+     }
   };
 
-  // --- Sidebar Logic ---
+  // --- CANVAS HELPERS ---
+
   const unmappedSessions = completedSessions.filter(s => !layout[s.id]);
 
   const addNodeToBoard = (sessionId: string) => {
     const boardW = boardRef.current?.clientWidth || 800;
     const boardH = boardRef.current?.clientHeight || 600;
-    // Center in current view
-    const centerX = (-pan.x + boardW / 2) - (NODE_WIDTH / 2);
-    const centerY = (-pan.y + boardH / 2) - (NODE_HEIGHT / 2);
+    const centerX = (-panRef.current.x + boardW / 2) - (NODE_WIDTH / 2);
+    const centerY = (-panRef.current.y + boardH / 2) - (NODE_HEIGHT / 2);
 
     onUpdateLayout({
         ...layout,
@@ -179,31 +233,17 @@ export const MindMapBoard: React.FC<MindMapBoardProps> = ({
     e.stopPropagation();
     const newLayout = { ...layout };
     delete newLayout[sessionId];
-    // Remove connections TO this node
+    // Remove connections to this node
     Object.keys(newLayout).forEach(key => {
         newLayout[key].connections = newLayout[key].connections.filter(cid => cid !== sessionId);
     });
     onUpdateLayout(newLayout);
   };
 
-  // --- Render Helpers ---
-
-  // Generate a bezier curve path
   const getPath = (x1: number, y1: number, x2: number, y2: number) => {
-    // Control points: extended horizontally from the source and target
-    // Source comes out of Right, Target enters from Left usually, 
-    // but in a canvas it enters closest side. For simplicity, we assume Right-to-Left flow usually
-    // or just maintain horizontal curvature.
-    
     const dist = Math.abs(x2 - x1);
-    const controlOffset = Math.max(dist * 0.5, 50);
-
-    const cp1x = x1 + controlOffset;
-    const cp1y = y1;
-    const cp2x = x2 - controlOffset;
-    const cp2y = y2;
-
-    return `M ${x1} ${y1} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${x2} ${y2}`;
+    const controlOffset = Math.max(dist * 0.5, 80);
+    return `M ${x1} ${y1} C ${x1 + controlOffset} ${y1}, ${x2 - controlOffset} ${y2}, ${x2} ${y2}`;
   };
 
   return (
@@ -228,16 +268,11 @@ export const MindMapBoard: React.FC<MindMapBoardProps> = ({
                         <div className="font-medium text-gray-300 group-hover:text-white truncate">{s.task}</div>
                         <div className="flex justify-between mt-1 text-[10px] text-gray-500">
                            <span>{s.durationMinutes}m</span>
-                           <span>+ Add to canvas</span>
+                           <span>+ Add</span>
                         </div>
                     </div>
                 ))
             )}
-        </div>
-        <div className="p-3 border-t border-white/5 bg-zinc-950/50">
-            <div className="text-[10px] text-gray-600">
-                Tip: Drag the <strong>dot</strong> on the right of a card to link it to another.
-            </div>
         </div>
       </div>
 
@@ -246,11 +281,8 @@ export const MindMapBoard: React.FC<MindMapBoardProps> = ({
         ref={boardRef}
         className={`flex-1 relative bg-[#0e0e0e] overflow-hidden ${isPanning ? 'cursor-grabbing' : 'cursor-default'}`}
         onMouseDown={handleMouseDownBoard}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
       >
-        {/* Dot Grid Pattern */}
+        {/* Background Grid */}
         <div 
             className="absolute inset-0 pointer-events-none opacity-10"
             style={{
@@ -260,49 +292,42 @@ export const MindMapBoard: React.FC<MindMapBoardProps> = ({
             }}
         />
 
-        {/* --- CANVAS CONTENT --- */}
         <div 
             className="absolute inset-0 origin-top-left pointer-events-none"
             style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}
         >
             
-            {/* 1. Connections Layer (SVG) */}
-            <svg className="absolute top-0 left-0 w-[50000px] h-[50000px] pointer-events-none -translate-x-[25000px] -translate-y-[25000px] overflow-visible">
+            {/* SVG Connections Layer */}
+            <svg className="absolute top-0 left-0 w-[50000px] h-[50000px] pointer-events-none -translate-x-[25000px] -translate-y-[25000px] overflow-visible z-0">
                 <defs>
-                   <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-                     <polygon points="0 0, 10 3.5, 0 7" fill="#666" />
+                   <marker id="arrowhead" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+                     <path d="M2,2 L10,6 L2,10 L2,2" fill="#666" />
                    </marker>
                 </defs>
 
-                {/* Existing Connections */}
                 {Object.keys(layout).map(sourceId => {
                     const source = layout[sourceId];
-                    // Output point (Right Center)
                     const sx = source.x + NODE_WIDTH;
                     const sy = source.y + (NODE_HEIGHT / 2);
 
                     return source.connections.map(targetId => {
                         const target = layout[targetId];
                         if (!target) return null;
-                        
-                        // Input point (Left Center)
-                        const tx = target.x;
-                        const ty = target.y + (NODE_HEIGHT / 2);
-
                         return (
                             <path
                                 key={`${sourceId}-${targetId}`}
-                                d={getPath(sx, sy, tx, ty)}
+                                d={getPath(sx, sy, target.x, target.y + NODE_HEIGHT/2)}
                                 stroke="#555"
                                 strokeWidth="2"
                                 fill="none"
                                 markerEnd="url(#arrowhead)"
+                                className="opacity-60"
                             />
                         );
                     });
                 })}
 
-                {/* Temporary Link (While dragging) */}
+                {/* Temporary Link (While Dragging) */}
                 {tempLink && (
                     <path 
                         d={getPath(getNodePos(tempLink.sourceId).x + NODE_WIDTH, getNodePos(tempLink.sourceId).y + NODE_HEIGHT/2, tempLink.endX, tempLink.endY)}
@@ -315,7 +340,7 @@ export const MindMapBoard: React.FC<MindMapBoardProps> = ({
                 )}
             </svg>
 
-            {/* 2. Nodes Layer */}
+            {/* Nodes Layer */}
             {Object.keys(layout).map(id => {
                 const session = completedSessions.find(s => s.id === id);
                 if (!session) return null;
@@ -327,8 +352,8 @@ export const MindMapBoard: React.FC<MindMapBoardProps> = ({
                     <div
                         id={`node-${id}`}
                         key={id}
-                        className={`absolute flex flex-col pointer-events-auto transition-shadow
-                            ${isDragging ? 'z-50 cursor-grabbing' : 'z-10 cursor-grab'}
+                        className={`absolute flex flex-col pointer-events-auto transition-all group/node
+                            ${isDragging ? 'z-50 cursor-grabbing' : 'z-10 hover:z-40 cursor-grab'}
                         `}
                         style={{ 
                             left: pos.x, 
@@ -337,33 +362,27 @@ export const MindMapBoard: React.FC<MindMapBoardProps> = ({
                             height: NODE_HEIGHT
                         }}
                         onMouseDown={(e) => handleMouseDownNode(e, id)}
-                        onMouseUp={(e) => handleMouseUpNode(e, id)}
+                        onMouseUp={() => handleMouseUpNode(id)}
                     >
-                        {/* Card Body */}
                         <div className={`
-                             w-full h-full bg-[#1a1a1a] border rounded-lg p-3 shadow-xl flex flex-col justify-between
-                             ${isDragging ? 'border-indigo-500 shadow-indigo-500/20 scale-105 transition-transform' : 'border-white/10 hover:border-white/30'}
+                             w-full h-full bg-[#1a1a1a] border rounded-lg p-3 shadow-xl flex flex-col justify-between relative z-10
+                             ${isDragging ? 'border-indigo-500 shadow-indigo-500/20 scale-105' : 'border-white/10 hover:border-white/30'}
                         `}>
-                            {/* Header */}
-                            <div className="flex justify-between items-start">
+                            <div className="flex justify-between items-start pointer-events-auto">
                                 <span className="text-[9px] font-mono text-gray-500 uppercase tracking-widest">
                                     {new Date(session.startTime).toLocaleDateString(undefined, {month:'short', day:'numeric'})}
                                 </span>
                                 <button 
-                                    onMouseDown={(e) => e.stopPropagation()} // Prevent drag start
+                                    onMouseDown={(e) => e.stopPropagation()} 
                                     onClick={(e) => removeNodeFromBoard(id, e)}
-                                    className="text-gray-700 hover:text-red-500 -mt-1 -mr-1 px-1 transition-colors"
+                                    className="text-gray-700 hover:text-red-500 -mt-1 -mr-1 px-1 z-20"
                                 >
                                     ×
                                 </button>
                             </div>
-                            
-                            {/* Content */}
                             <div className="text-xs font-medium text-gray-200 line-clamp-2 leading-snug">
                                 {session.task}
                             </div>
-                            
-                            {/* Footer */}
                             <div className="flex justify-between items-end mt-1">
                                 <div className={`text-[9px] px-1.5 py-0.5 rounded-sm bg-indigo-500/10 text-indigo-400 border border-indigo-500/20`}>
                                     {session.durationMinutes}m
@@ -371,25 +390,32 @@ export const MindMapBoard: React.FC<MindMapBoardProps> = ({
                             </div>
                         </div>
 
-                        {/* CONNECTION HANDLE (Right Side) */}
+                        {/* CONNECTION HANDLE (RIGHT EDGE STRIP) */}
+                        {/* We use a large hit area (w-8) centered on the right edge */}
                         <div 
-                            className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center cursor-crosshair group/handle"
+                            className="absolute top-0 right-0 bottom-0 w-8 translate-x-1/2 z-50 flex items-center justify-center cursor-crosshair group/handle"
                             onMouseDown={(e) => handleMouseDownHandle(e, id)}
                         >
-                            <div className="w-3 h-3 bg-gray-600 rounded-full border-2 border-[#0e0e0e] group-hover/handle:bg-indigo-500 group-hover/handle:scale-125 transition-all"></div>
+                            {/* Visual Dot (Visible on Hover) */}
+                            <div className={`
+                                w-3 h-3 rounded-full border-2 border-[#111] transition-all duration-200
+                                ${isDragging ? 'opacity-0' : 'opacity-100'}
+                                bg-gray-600 
+                                group-hover/node:bg-gray-400 
+                                group-hover/handle:bg-indigo-500 group-hover/handle:scale-125
+                                shadow-[0_0_5px_rgba(0,0,0,0.8)]
+                            `}></div>
                         </div>
 
                     </div>
                 );
             })}
-
         </div>
 
-        {/* Floating Controls */}
+        {/* HUD */}
         <div className="absolute top-4 right-4 flex gap-2">
             <Button size="sm" variant="secondary" onClick={() => setPan({x:0, y:0})}>Recenter</Button>
         </div>
-
       </div>
     </div>
   );

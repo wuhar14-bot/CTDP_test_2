@@ -16,7 +16,6 @@ interface FocusControllerProps {
   onCancel: () => void;
   onAddRule: (rule: string) => void;
   onDeleteRule: (id: string) => void;
-  onOpenMindMap: () => void;
 }
 
 const AUX_DURATION_SEC = 15 * 60; // 15 minutes
@@ -33,8 +32,7 @@ export const FocusController: React.FC<FocusControllerProps> = ({
   onFinishFocus,
   onCancel,
   onAddRule,
-  onDeleteRule,
-  onOpenMindMap
+  onDeleteRule
 }) => {
   const [taskInput, setTaskInput] = useState('');
   const [ruleInput, setRuleInput] = useState('');
@@ -96,16 +94,9 @@ export const FocusController: React.FC<FocusControllerProps> = ({
             <span className="text-2xl">⚡</span> Start Focus Chain
           </h2>
           
-          <button 
-            onClick={onOpenMindMap}
-            className="group relative px-3 py-1 bg-zinc-800 rounded-full border border-white/10 text-xs font-mono text-gray-400 hover:border-indigo-500 hover:text-white transition-all cursor-pointer"
-          >
-            <span className="absolute inset-0 bg-indigo-500/10 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></span>
-            Chain: <span className="text-white font-bold group-hover:text-indigo-400">{chainCount}</span>
-            <span className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-[10px] text-indigo-400">
-              Open Map ↗
-            </span>
-          </button>
+          <div className="px-3 py-1 bg-zinc-800 rounded-full border border-white/10 text-xs font-mono text-gray-400">
+            Chain: <span className="text-white font-bold">{chainCount}</span>
+          </div>
         </div>
 
         <form onSubmit={handleAuxSubmit} className="space-y-4">

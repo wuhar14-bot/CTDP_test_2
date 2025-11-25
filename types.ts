@@ -1,5 +1,5 @@
 
-export type AppStage = 'IDLE' | 'AUX_COUNTDOWN' | 'FOCUS' | 'MINDMAP';
+export type AppStage = 'IDLE' | 'AUX_COUNTDOWN' | 'FOCUS';
 
 export interface FocusSession {
   id: string;
@@ -10,23 +10,23 @@ export interface FocusSession {
   status?: 'completed' | 'planned';
 }
 
+export interface NodeLayout {
+  x: number;
+  y: number;
+  connections: string[];
+}
+
 export interface ExceptionRule {
   id: string;
   text: string;
   createdAt: string;
 }
 
-export interface NodeLayout {
-  x: number;
-  y: number;
-  connections: string[]; // Array of session IDs this node connects TO
-}
-
 export interface SacredSeatData {
   chainCount: number;
   history: FocusSession[];
   rules: ExceptionRule[];
-  mindMapLayout?: Record<string, NodeLayout>; // Map sessionId -> Layout
+  mindMapLayout?: Record<string, NodeLayout>;
 }
 
 export interface AppState {
