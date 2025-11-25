@@ -25,7 +25,7 @@ export const MindMapBoard: React.FC<MindMapBoardProps> = ({
   
   // State
   const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState(1);
+  const [zoom] = useState(1);
   const [isPanning, setIsPanning] = useState(false);
   
   // Dragging Node State
@@ -127,7 +127,7 @@ export const MindMapBoard: React.FC<MindMapBoardProps> = ({
   };
 
   // 4. Global Mouse Up
-  const handleMouseUp = (e: React.MouseEvent) => {
+  const handleMouseUp = () => {
     setIsPanning(false);
     setDraggingNodeId(null);
 
