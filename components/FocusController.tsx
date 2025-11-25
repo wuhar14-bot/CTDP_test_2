@@ -51,9 +51,8 @@ export const FocusController: React.FC<FocusControllerProps> = ({
   const [todoInput, setTodoInput] = useState('');
   const [stepInput, setStepInput] = useState('');
   
-  // Tab states
+  // Tab states for IDLE mode
   const [activeTab, setActiveTab] = useState<'backlog' | 'rules'>('backlog');
-  const [focusTab, setFocusTab] = useState<'steps' | 'rules'>('steps');
 
   const [timeLeft, setTimeLeft] = useState(AUX_DURATION_SEC);
   const [elapsed, setElapsed] = useState(0);
@@ -294,131 +293,137 @@ export const FocusController: React.FC<FocusControllerProps> = ({
 
   // --- STAGE 3: ACTIVE FOCUS (SACRED SEAT) ---
   return (
-    <div className="flex flex-col md:flex-row gap-6 h-[calc(100vh-140px)] min-h-[500px]">
-      {/* Main Focus Card */}
-      <div className="flex-1 p-8 bg-black border border-indigo-500/30 rounded-2xl shadow-[0_0_50px_rgba(99,102,241,0.15)] relative overflow-hidden flex flex-col items-center justify-center">
-        {/* Ambient Background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/10 via-transparent to-purple-900/10 pointer-events-none"></div>
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-140px)] min-h-[600px]">
+      
+      {/* 1. TIMER COLUMN (CENTER FOCUS) */}
+      <div className="bg-zinc-900/50 border border-white/5 rounded-2xl flex flex-col overflow-hidden relative shadow-xl">
+        {/* Header */}
+        <div className="h-12 border-b border-white/5 bg-black/20 flex items-center px-4 justify-between shrink-0">
+             <span className="text-xs font-bold uppercase tracking-wider text-indigo-400 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
+                Active Session
+             </span>
+             <span className="text-[10px] text-gray-500 truncate max-w-[150px]">{currentTask}</span>
+        </div>
         
-        <div className="relative z-10 text-center w-full max-w-lg">
-          <div className="inline-block px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 rounded-full text-indigo-300 text-xs font-bold uppercase tracking-widest mb-6 animate-pulse">
-            Sacred Seat Active
-          </div>
-          
-          <h2 className="text-3xl font-bold text-white mb-2 leading-tight">{currentTask}</h2>
-          
-          <div className="my-10">
-             <div className="text-8xl font-mono font-bold text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-400 tabular-nums tracking-tighter">
+        {/* Main Content */}
+        <div className="flex-1 flex flex-col items-center justify-center p-6 relative">
+             <div className="absolute inset-0 bg-gradient-to-b from-indigo-500/5 to-transparent pointer-events-none"></div>
+             
+             <div className="text-6xl xl:text-7xl font-mono font-bold text-white tabular-nums tracking-tighter drop-shadow-2xl z-10 mb-2">
                {formatTime(elapsed)}
              </div>
-             <div className="text-gray-500 text-sm mt-2 font-mono uppercase">Time Elapsed</div>
-          </div>
+             <div className="text-indigo-500/50 text-[10px] uppercase tracking-[0.2em] font-bold z-10">Sacred Seat Time</div>
+        </div>
 
-          <div className="grid grid-cols-2 gap-4 w-full">
-            <Button onClick={onCancel} variant="danger" className="w-full">
-              Reset (Violation)
-            </Button>
-            <Button onClick={onFinishFocus} className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white shadow-emerald-500/20">
+        {/* Footer Actions */}
+        <div className="p-3 border-t border-white/5 bg-zinc-900/80 backdrop-blur shrink-0 grid gap-2">
+            <Button onClick={onFinishFocus} className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-lg shadow-emerald-900/20">
               Complete Session
             </Button>
-          </div>
+            <Button onClick={onCancel} variant="danger" size="sm" className="w-full bg-red-500/5 hover:bg-red-500/10 border-red-500/10 text-[10px] py-1">
+              Reset (Violation)
+            </Button>
         </div>
       </div>
 
-      {/* Side Panel (Tabs: Steps vs Rules) */}
-      <div className="w-full md:w-80 bg-zinc-900/50 border border-white/5 rounded-2xl flex flex-col overflow-hidden">
-        {/* Tab Header */}
-        <div className="flex border-b border-white/5">
-            <button 
-                onClick={() => setFocusTab('steps')}
-                className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-colors ${focusTab === 'steps' ? 'bg-white/5 text-white' : 'text-gray-500 hover:text-gray-300'}`}
-            >
-                Steps
-            </button>
-            <button 
-                onClick={() => setFocusTab('rules')}
-                className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-colors ${focusTab === 'rules' ? 'bg-white/5 text-white' : 'text-gray-500 hover:text-gray-300'}`}
-            >
-                Rules
-            </button>
-        </div>
-
-        {/* Tab Content */}
-        <div className="flex-1 p-4 flex flex-col min-h-0">
-            {focusTab === 'steps' ? (
-                // STEPS CONTENT
-                <>
-                    <div className="flex-1 overflow-y-auto mb-4 space-y-2 hide-scrollbar">
-                        {currentSteps.length === 0 ? (
-                            <div className="text-gray-600 text-sm italic text-center py-4">
-                                No steps recorded. <br/> Log your actions here.
+      {/* 2. SESSION LOG COLUMN */}
+      <div className="bg-zinc-900/50 border border-white/5 rounded-2xl flex flex-col overflow-hidden relative shadow-xl">
+             <div className="h-12 border-b border-white/5 bg-black/20 flex items-center px-4 justify-between shrink-0">
+                <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Session Log</span>
+                <span className="text-[10px] bg-white/5 text-gray-300 px-1.5 py-0.5 rounded border border-white/5">{currentSteps.length}</span>
+             </div>
+             
+             {/* List of Steps */}
+             <div className="p-3 overflow-y-auto flex-1 space-y-2 hide-scrollbar flex flex-col-reverse">
+                {currentSteps.length === 0 ? (
+                    <div className="h-full flex flex-col items-center justify-center text-gray-600 text-xs italic opacity-50">
+                        <span>No actions recorded.</span>
+                        <span className="mt-1">Log your progress below.</span>
+                    </div>
+                ) : (
+                    currentSteps.map((step, idx) => (
+                        <div key={idx} className="bg-zinc-800/40 border border-white/5 rounded p-3 text-sm text-gray-300 flex justify-between items-start group animate-in slide-in-from-bottom-1 fade-in duration-300 hover:bg-zinc-800/60 transition-colors">
+                            <div className="flex gap-3">
+                                <span className="text-gray-600 text-xs font-mono mt-0.5 min-w-[1.5rem]">{(idx + 1).toString().padStart(2, '0')}</span>
+                                <span className="break-words leading-relaxed text-xs">{step}</span>
                             </div>
-                        ) : (
-                            currentSteps.map((step, idx) => (
-                                <div key={idx} className="bg-zinc-800/50 border border-white/5 rounded p-2 text-sm text-gray-300 flex justify-between items-start group">
-                                    <span className="flex-1 break-words mr-2">
-                                        <span className="text-indigo-500/50 mr-2">{idx + 1}.</span>
-                                        {step}
-                                    </span>
-                                    <button 
-                                        onClick={() => onDeleteStep(idx)}
-                                        className="text-gray-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity px-1"
-                                    >
-                                        ×
-                                    </button>
-                                </div>
-                            ))
-                        )}
-                    </div>
-                    <form onSubmit={handleStepSubmit} className="mt-auto">
-                        <div className="flex gap-2">
-                            <input
-                                type="text"
-                                value={stepInput}
-                                onChange={(e) => setStepInput(e.target.value)}
-                                placeholder="Record action..."
-                                className="flex-1 bg-zinc-950 border border-white/10 rounded px-3 py-2 text-sm text-white focus:border-indigo-500/50 outline-none"
-                            />
-                            <Button type="submit" size="sm" variant="secondary">→</Button>
+                            <button 
+                                onClick={() => onDeleteStep(idx)}
+                                className="text-gray-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity px-1 -mr-1"
+                            >
+                                ×
+                            </button>
                         </div>
-                    </form>
-                </>
-            ) : (
-                // RULES CONTENT
-                <>
-                     <div className="flex-1 overflow-y-auto mb-4 space-y-2 hide-scrollbar">
-                        {rules.length === 0 ? (
-                            <div className="text-gray-600 text-sm italic text-center py-4">No exceptions recorded.</div>
-                        ) : (
-                            rules.map(rule => (
-                                <div key={rule.id} className="bg-red-500/5 border border-red-500/10 rounded p-3 text-sm text-gray-300 group relative">
-                                    <span className="text-red-400 font-bold mr-2">!</span> {rule.text}
-                                    <button 
-                                        onClick={() => onDeleteRule(rule.id)}
-                                        className="absolute top-2 right-2 text-gray-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
-                                    >
-                                        ×
-                                    </button>
-                                </div>
-                            ))
-                        )}
+                    ))
+                )}
+            </div>
+
+            {/* Footer Input */}
+            <div className="p-3 border-t border-white/5 bg-zinc-900/80 backdrop-blur shrink-0">
+                <form onSubmit={handleStepSubmit} className="relative group">
+                    <input
+                        type="text"
+                        value={stepInput}
+                        onChange={(e) => setStepInput(e.target.value)}
+                        placeholder="Log next action..."
+                        className="w-full bg-black/50 border border-white/10 rounded-lg py-2.5 pl-3 pr-10 text-xs text-white placeholder-gray-600 focus:ring-1 focus:ring-indigo-500/50 focus:border-indigo-500/50 outline-none transition-all"
+                        autoFocus
+                    />
+                    <div className="absolute inset-y-0 right-2 flex items-center">
+                        <button 
+                            type="submit"
+                            className="p-1 text-[10px] bg-white/5 hover:bg-white/10 rounded text-gray-400 transition-colors uppercase font-bold tracking-wider"
+                            disabled={!stepInput.trim()}
+                        >
+                            ↵
+                        </button>
                     </div>
-                    <form onSubmit={handleRuleSubmit} className="mt-auto">
-                        <div className="flex gap-2">
-                            <input
-                                type="text"
-                                value={ruleInput}
-                                onChange={(e) => setRuleInput(e.target.value)}
-                                placeholder="Add rule..."
-                                className="flex-1 bg-zinc-950 border border-white/10 rounded px-3 py-2 text-sm text-white focus:border-red-500/50 outline-none"
-                            />
-                            <Button type="submit" size="sm" variant="secondary">+</Button>
-                        </div>
-                    </form>
-                </>
-            )}
-        </div>
+                </form>
+            </div>
       </div>
+
+      {/* 3. ACTIVE RULES COLUMN */}
+      <div className="bg-zinc-900/50 border border-white/5 rounded-2xl flex flex-col overflow-hidden relative shadow-xl">
+             <div className="h-12 border-b border-white/5 bg-black/20 flex items-center px-4 justify-between shrink-0">
+                <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Active Rules</span>
+                <span className="text-[10px] bg-red-500/10 text-red-400 px-1.5 py-0.5 rounded border border-red-500/20">{rules.length}</span>
+             </div>
+
+             <div className="p-3 overflow-y-auto flex-1 space-y-2 hide-scrollbar">
+                {rules.length === 0 ? (
+                    <div className="text-gray-600 text-xs italic text-center py-4">No constraints set.</div>
+                ) : (
+                    rules.map(rule => (
+                        <div key={rule.id} className="bg-red-500/5 border border-red-500/10 rounded p-2.5 text-xs text-gray-300 flex gap-2 group relative hover:bg-red-500/10 transition-colors">
+                            <span className="text-red-400 font-bold mt-0.5">!</span> 
+                            <span className="break-words leading-relaxed opacity-80">{rule.text}</span>
+                             <button 
+                                onClick={() => onDeleteRule(rule.id)}
+                                className="absolute top-1 right-1 text-gray-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                                ×
+                            </button>
+                        </div>
+                    ))
+                )}
+            </div>
+
+            {/* Footer Input */}
+            <div className="p-3 border-t border-white/5 bg-zinc-900/80 backdrop-blur shrink-0">
+                 <form onSubmit={handleRuleSubmit} className="flex gap-2">
+                    <input
+                        type="text"
+                        value={ruleInput}
+                        onChange={(e) => setRuleInput(e.target.value)}
+                        placeholder="Add rule..."
+                        className="flex-1 bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:border-red-500/50 outline-none"
+                    />
+                    <button type="submit" className="text-gray-400 hover:text-white px-2.5 py-1 bg-white/5 rounded-lg text-xs hover:bg-white/10 transition-colors">+</button>
+                </form>
+            </div>
+      </div>
+
     </div>
   );
 };
