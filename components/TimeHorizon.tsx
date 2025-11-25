@@ -143,18 +143,27 @@ export const TimeHorizon: React.FC<TimeHorizonProps> = ({ sessions, onDeleteSess
 
       <div className="relative select-none">
         
-        {/* Grid Background Lines */}
-        <div className="absolute inset-0 flex pointer-events-none pl-24">
-            {markers.map((h) => (
-                <div key={h} className="h-full border-l border-white/5 relative flex-1 first:border-l-0">
-                    <span className="absolute -top-4 -left-3 text-[9px] text-gray-600 font-mono">
-                        {h}:00
-                    </span>
-                    <span className="absolute -bottom-4 -left-3 text-[9px] text-gray-600 font-mono">
-                        {h}:00
-                    </span>
-                </div>
-            ))}
+        {/* Grid Background Lines - Percentage Based */}
+        <div className="absolute inset-0 pointer-events-none pl-24">
+            <div className="relative w-full h-full">
+                {markers.map((h) => {
+                    const percent = ((h - START_HOUR) / TOTAL_HOURS) * 100;
+                    return (
+                        <div 
+                            key={h} 
+                            className={`absolute top-0 bottom-0 border-l border-white/5 ${h === START_HOUR ? 'border-l-0' : ''}`}
+                            style={{ left: `${percent}%` }}
+                        >
+                             <span className="absolute -top-4 -left-3 text-[9px] text-gray-600 font-mono">
+                                {h}:00
+                             </span>
+                             <span className="absolute -bottom-4 -left-3 text-[9px] text-gray-600 font-mono">
+                                {h}:00
+                             </span>
+                        </div>
+                    );
+                })}
+            </div>
         </div>
 
         {/* Rows */}
