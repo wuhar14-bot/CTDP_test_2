@@ -10,6 +10,10 @@ interface MindMapBoardProps {
   onClose: () => void;
 }
 
+// Visual Constants
+const NODE_WIDTH = 220;
+const NODE_HEIGHT = 90;
+
 export const MindMapBoard: React.FC<MindMapBoardProps> = ({
   sessions,
   layout,
@@ -21,10 +25,15 @@ export const MindMapBoard: React.FC<MindMapBoardProps> = ({
   
   // State
   const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
   const [isPanning, setIsPanning] = useState(false);
-  const [draggingNode, setDraggingNode] = useState<string | null>(null);
+  
+  // Dragging Node State
+  const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-  const [linkMode, setLinkMode] = useState<{ active: boolean, sourceId: string | null }>({ active: false, sourceId: null });
+
+  // Linking State
+  const [tempLink, setTempLink] = useState<{ sourceId: string; endX: number; endY: number } | null>(null);
 
   // Refs
   const boardRef = useRef<HTMLDivElement>(null);
@@ -35,89 +44,130 @@ export const MindMapBoard: React.FC<MindMapBoardProps> = ({
     return layout[id] || { x: 100, y: 100, connections: [] };
   };
 
+  const getCanvasCoordinates = (clientX: number, clientY: number) => {
+    // Convert screen coordinates to canvas coordinates accounting for Pan and Zoom
+    // For now we keep zoom at 1 for simplicity, but math is ready
+    return {
+      x: (clientX - pan.x) / zoom,
+      y: (clientY - pan.y) / zoom
+    };
+  };
+
   // --- Event Handlers ---
 
   const handleMouseDownBoard = (e: React.MouseEvent) => {
-    // If clicking directly on board, start pan
     if (e.target === boardRef.current) {
       setIsPanning(true);
       lastMousePos.current = { x: e.clientX, y: e.clientY };
     }
   };
 
+  // 1. Start Dragging Node
   const handleMouseDownNode = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-
-    // Link Mode Logic
-    if (linkMode.active) {
-      if (linkMode.sourceId === null) {
-        setLinkMode({ ...linkMode, sourceId: id });
-      } else if (linkMode.sourceId !== id) {
-        // Create link
-        const sourceLayout = getNodePos(linkMode.sourceId);
-        // Avoid duplicates
-        if (!sourceLayout.connections.includes(id)) {
-            const newLayout = {
-                ...layout,
-                [linkMode.sourceId]: {
-                    ...sourceLayout,
-                    connections: [...sourceLayout.connections, id]
-                }
-            };
-            onUpdateLayout(newLayout);
-        }
-        setLinkMode({ active: false, sourceId: null });
-      }
-      return;
-    }
-
-    // Drag Logic
     const pos = getNodePos(id);
-    setDraggingNode(id);
-    // Calculate offset from top-left of node to mouse
+    const mouseCanvas = getCanvasCoordinates(e.clientX, e.clientY);
+    
+    setDraggingNodeId(id);
     setDragOffset({
-      x: e.clientX - pos.x,
-      y: e.clientY - pos.y
+      x: mouseCanvas.x - pos.x,
+      y: mouseCanvas.y - pos.y
     });
   };
 
+  // 2. Start Dragging Link (Handle Click)
+  const handleMouseDownHandle = (e: React.MouseEvent, sourceId: string) => {
+    e.stopPropagation();
+    const pos = getNodePos(sourceId);
+    
+    // Start the temp link from the handle position (Right side of node)
+    const startX = pos.x + NODE_WIDTH;
+    const startY = pos.y + (NODE_HEIGHT / 2);
+
+    setTempLink({
+      sourceId,
+      endX: startX, // Initially ends at start
+      endY: startY
+    });
+  };
+
+  // 3. Global Mouse Move
   const handleMouseMove = (e: React.MouseEvent) => {
+    // A. Panning Board
     if (isPanning) {
       const dx = e.clientX - lastMousePos.current.x;
       const dy = e.clientY - lastMousePos.current.y;
       setPan(p => ({ x: p.x + dx, y: p.y + dy }));
       lastMousePos.current = { x: e.clientX, y: e.clientY };
-    } else if (draggingNode) {
-      // Calculate new node position
-      // Node position is absolute within the pan-space
-      const newX = e.clientX - dragOffset.x;
-      const newY = e.clientY - dragOffset.y;
+      return;
+    }
+
+    const mouseCanvas = getCanvasCoordinates(e.clientX, e.clientY);
+
+    // B. Dragging Node
+    if (draggingNodeId) {
+      const newX = mouseCanvas.x - dragOffset.x;
+      const newY = mouseCanvas.y - dragOffset.y;
       
       onUpdateLayout({
         ...layout,
-        [draggingNode]: {
-            ...getNodePos(draggingNode),
+        [draggingNodeId]: {
+            ...getNodePos(draggingNodeId),
             x: newX,
             y: newY
         }
       });
+      return;
+    }
+
+    // C. Dragging Connection Wire
+    if (tempLink) {
+      setTempLink(prev => prev ? { ...prev, endX: mouseCanvas.x, endY: mouseCanvas.y } : null);
     }
   };
 
-  const handleMouseUp = () => {
+  // 4. Global Mouse Up
+  const handleMouseUp = (e: React.MouseEvent) => {
     setIsPanning(false);
-    setDraggingNode(null);
+    setDraggingNodeId(null);
+
+    // If we were dragging a link, check if we dropped it on a node
+    if (tempLink) {
+      // Logic handled in handleMouseUpNode, but if we drop here (on empty space), cancel it
+      setTempLink(null);
+    }
+  };
+
+  // 5. Drop Link on Target Node
+  const handleMouseUpNode = (e: React.MouseEvent, targetId: string) => {
+    if (tempLink && tempLink.sourceId !== targetId) {
+       e.stopPropagation();
+       const sourceNode = getNodePos(tempLink.sourceId);
+       
+       // Avoid duplicates
+       if (!sourceNode.connections.includes(targetId)) {
+          const newLayout = {
+             ...layout,
+             [tempLink.sourceId]: {
+                ...sourceNode,
+                connections: [...sourceNode.connections, targetId]
+             }
+          };
+          onUpdateLayout(newLayout);
+       }
+       setTempLink(null);
+    }
   };
 
   // --- Sidebar Logic ---
   const unmappedSessions = completedSessions.filter(s => !layout[s.id]);
 
   const addNodeToBoard = (sessionId: string) => {
-    // Add to center of view
     const boardW = boardRef.current?.clientWidth || 800;
     const boardH = boardRef.current?.clientHeight || 600;
-    const centerX = -pan.x + (boardW / 2) - 100; // -100 for half node width approx
-    const centerY = -pan.y + (boardH / 2) - 40;
+    // Center in current view
+    const centerX = (-pan.x + boardW / 2) - (NODE_WIDTH / 2);
+    const centerY = (-pan.y + boardH / 2) - (NODE_HEIGHT / 2);
 
     onUpdateLayout({
         ...layout,
@@ -129,55 +179,64 @@ export const MindMapBoard: React.FC<MindMapBoardProps> = ({
     e.stopPropagation();
     const newLayout = { ...layout };
     delete newLayout[sessionId];
-    // Also remove connections TO this node
+    // Remove connections TO this node
     Object.keys(newLayout).forEach(key => {
         newLayout[key].connections = newLayout[key].connections.filter(cid => cid !== sessionId);
     });
     onUpdateLayout(newLayout);
   };
 
-  // --- Rendering ---
+  // --- Render Helpers ---
+
+  // Generate a bezier curve path
+  const getPath = (x1: number, y1: number, x2: number, y2: number) => {
+    // Control points: extended horizontally from the source and target
+    // Source comes out of Right, Target enters from Left usually, 
+    // but in a canvas it enters closest side. For simplicity, we assume Right-to-Left flow usually
+    // or just maintain horizontal curvature.
+    
+    const dist = Math.abs(x2 - x1);
+    const controlOffset = Math.max(dist * 0.5, 50);
+
+    const cp1x = x1 + controlOffset;
+    const cp1y = y1;
+    const cp2x = x2 - controlOffset;
+    const cp2y = y2;
+
+    return `M ${x1} ${y1} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${x2} ${y2}`;
+  };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black flex text-white overflow-hidden font-sans">
+    <div className="fixed inset-0 z-50 bg-[#111] flex text-white overflow-hidden font-sans select-none">
       
       {/* Sidebar */}
-      <div className="w-64 bg-zinc-900 border-r border-white/10 flex flex-col z-20 shadow-xl">
-        <div className="p-4 border-b border-white/5 flex items-center justify-between">
-            <h3 className="font-bold text-gray-300">Unmapped Tasks</h3>
-            <Button size="sm" variant="ghost" onClick={onClose}>Exit</Button>
+      <div className="w-64 bg-zinc-900 border-r border-white/5 flex flex-col z-20 shadow-2xl">
+        <div className="p-4 border-b border-white/5 flex items-center justify-between bg-zinc-950">
+            <h3 className="font-bold text-gray-300 text-sm uppercase tracking-wider">Backlog</h3>
+            <Button size="sm" variant="ghost" onClick={onClose} className="h-6 w-6 p-0 text-gray-400">✕</Button>
         </div>
-        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+        <div className="flex-1 overflow-y-auto p-2 space-y-2">
             {unmappedSessions.length === 0 ? (
-                <div className="text-xs text-gray-500 text-center py-4">All tasks mapped!</div>
+                <div className="text-xs text-gray-600 text-center py-8 italic">Canvas is up to date.</div>
             ) : (
                 unmappedSessions.map(s => (
                     <div 
                         key={s.id} 
-                        className="p-3 bg-zinc-800 border border-white/5 rounded text-xs cursor-pointer hover:bg-zinc-700 hover:border-indigo-500 transition-all"
+                        className="p-3 bg-zinc-800/50 border border-white/5 rounded text-xs cursor-pointer hover:bg-zinc-800 hover:border-indigo-500 transition-all group"
                         onClick={() => addNodeToBoard(s.id)}
                     >
-                        {s.task}
+                        <div className="font-medium text-gray-300 group-hover:text-white truncate">{s.task}</div>
+                        <div className="flex justify-between mt-1 text-[10px] text-gray-500">
+                           <span>{s.durationMinutes}m</span>
+                           <span>+ Add to canvas</span>
+                        </div>
                     </div>
                 ))
             )}
         </div>
-        <div className="p-4 border-t border-white/5 bg-zinc-950">
-            <div className="text-[10px] text-gray-500 mb-2">CONTROLS</div>
-            <div className="space-y-2">
-                <Button 
-                    size="sm" 
-                    variant={linkMode.active ? 'primary' : 'secondary'} 
-                    className="w-full text-xs"
-                    onClick={() => setLinkMode(p => ({ active: !p.active, sourceId: null }))}
-                >
-                    {linkMode.active ? (linkMode.sourceId ? 'Click Target Node' : 'Select Source Node') : 'Link Nodes 🔗'}
-                </Button>
-                <div className="text-[10px] text-gray-600 leading-tight">
-                    • Drag tasks from list to board.<br/>
-                    • Drag nodes to arrange.<br/>
-                    • Drag background to pan.
-                </div>
+        <div className="p-3 border-t border-white/5 bg-zinc-950/50">
+            <div className="text-[10px] text-gray-600">
+                Tip: Drag the <strong>dot</strong> on the right of a card to link it to another.
             </div>
         </div>
       </div>
@@ -185,114 +244,149 @@ export const MindMapBoard: React.FC<MindMapBoardProps> = ({
       {/* Canvas */}
       <div 
         ref={boardRef}
-        className={`flex-1 relative bg-[#0a0a0a] overflow-hidden ${isPanning ? 'cursor-grabbing' : 'cursor-grab'} ${linkMode.active ? 'cursor-crosshair' : ''}`}
+        className={`flex-1 relative bg-[#0e0e0e] overflow-hidden ${isPanning ? 'cursor-grabbing' : 'cursor-default'}`}
         onMouseDown={handleMouseDownBoard}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
       >
-        {/* Grid Pattern */}
+        {/* Dot Grid Pattern */}
         <div 
-            className="absolute inset-0 pointer-events-none opacity-20"
+            className="absolute inset-0 pointer-events-none opacity-10"
             style={{
-                backgroundImage: 'radial-gradient(#333 1px, transparent 1px)',
-                backgroundSize: '20px 20px',
+                backgroundImage: 'radial-gradient(#555 1px, transparent 1px)',
+                backgroundSize: '24px 24px',
                 transform: `translate(${pan.x}px, ${pan.y}px)`
             }}
         />
 
-        {/* Content Container with Pan Transform */}
+        {/* --- CANVAS CONTENT --- */}
         <div 
             className="absolute inset-0 origin-top-left pointer-events-none"
-            style={{ transform: `translate(${pan.x}px, ${pan.y}px)` }}
+            style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}
         >
             
             {/* 1. Connections Layer (SVG) */}
-            <svg className="absolute top-0 left-0 w-[5000px] h-[5000px] pointer-events-none -translate-x-[2500px] -translate-y-[2500px] overflow-visible">
-                {/* We render lines based on node centers */}
+            <svg className="absolute top-0 left-0 w-[50000px] h-[50000px] pointer-events-none -translate-x-[25000px] -translate-y-[25000px] overflow-visible">
+                <defs>
+                   <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                     <polygon points="0 0, 10 3.5, 0 7" fill="#666" />
+                   </marker>
+                </defs>
+
+                {/* Existing Connections */}
                 {Object.keys(layout).map(sourceId => {
                     const source = layout[sourceId];
-                    // Removed unused sourceEl and w, h variables
-                    const w = 200; 
-                    const h = 60;
-                    const sx = source.x + (w/2);
-                    const sy = source.y + (h/2);
+                    // Output point (Right Center)
+                    const sx = source.x + NODE_WIDTH;
+                    const sy = source.y + (NODE_HEIGHT / 2);
 
                     return source.connections.map(targetId => {
                         const target = layout[targetId];
                         if (!target) return null;
-                        const tx = target.x + (w/2);
-                        const ty = target.y + (h/2);
+                        
+                        // Input point (Left Center)
+                        const tx = target.x;
+                        const ty = target.y + (NODE_HEIGHT / 2);
 
                         return (
-                            <line 
+                            <path
                                 key={`${sourceId}-${targetId}`}
-                                x1={sx} y1={sy} x2={tx} y2={ty}
-                                stroke="#4b5563"
+                                d={getPath(sx, sy, tx, ty)}
+                                stroke="#555"
                                 strokeWidth="2"
-                                strokeDasharray="5,5"
+                                fill="none"
+                                markerEnd="url(#arrowhead)"
                             />
                         );
                     });
                 })}
+
+                {/* Temporary Link (While dragging) */}
+                {tempLink && (
+                    <path 
+                        d={getPath(getNodePos(tempLink.sourceId).x + NODE_WIDTH, getNodePos(tempLink.sourceId).y + NODE_HEIGHT/2, tempLink.endX, tempLink.endY)}
+                        stroke="#7c3aed"
+                        strokeWidth="3"
+                        fill="none"
+                        strokeDasharray="5,5"
+                        className="animate-pulse"
+                    />
+                )}
             </svg>
 
             {/* 2. Nodes Layer */}
             {Object.keys(layout).map(id => {
                 const session = completedSessions.find(s => s.id === id);
-                if (!session) return null; // Should clean up layout if session deleted, but for safety
+                if (!session) return null;
 
                 const pos = getNodePos(id);
-                const isSource = linkMode.active && linkMode.sourceId === id;
+                const isDragging = draggingNodeId === id;
 
                 return (
                     <div
                         id={`node-${id}`}
                         key={id}
-                        className={`absolute w-[200px] bg-zinc-900 border rounded-lg p-3 shadow-lg pointer-events-auto select-none transition-shadow
-                            ${isSource ? 'border-indigo-500 ring-2 ring-indigo-500/50' : 'border-white/10 hover:border-white/30'}
+                        className={`absolute flex flex-col pointer-events-auto transition-shadow
+                            ${isDragging ? 'z-50 cursor-grabbing' : 'z-10 cursor-grab'}
                         `}
                         style={{ 
                             left: pos.x, 
                             top: pos.y,
-                            zIndex: draggingNode === id ? 50 : 10
+                            width: NODE_WIDTH,
+                            height: NODE_HEIGHT
                         }}
                         onMouseDown={(e) => handleMouseDownNode(e, id)}
+                        onMouseUp={(e) => handleMouseUpNode(e, id)}
                     >
-                        <div className="flex justify-between items-start mb-2">
-                            <span className="text-[10px] text-gray-500 font-mono">
-                                {new Date(session.startTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
-                            </span>
-                            <button 
-                                onClick={(e) => removeNodeFromBoard(id, e)}
-                                className="text-gray-600 hover:text-red-400 -mt-1 -mr-1 px-1"
-                            >
-                                ×
-                            </button>
-                        </div>
-                        <div className="text-sm font-bold text-gray-200 leading-tight">
-                            {session.task}
-                        </div>
-                        <div className="mt-2 text-[10px] text-emerald-500">
-                            {session.durationMinutes}m focus
+                        {/* Card Body */}
+                        <div className={`
+                             w-full h-full bg-[#1a1a1a] border rounded-lg p-3 shadow-xl flex flex-col justify-between
+                             ${isDragging ? 'border-indigo-500 shadow-indigo-500/20 scale-105 transition-transform' : 'border-white/10 hover:border-white/30'}
+                        `}>
+                            {/* Header */}
+                            <div className="flex justify-between items-start">
+                                <span className="text-[9px] font-mono text-gray-500 uppercase tracking-widest">
+                                    {new Date(session.startTime).toLocaleDateString(undefined, {month:'short', day:'numeric'})}
+                                </span>
+                                <button 
+                                    onMouseDown={(e) => e.stopPropagation()} // Prevent drag start
+                                    onClick={(e) => removeNodeFromBoard(id, e)}
+                                    className="text-gray-700 hover:text-red-500 -mt-1 -mr-1 px-1 transition-colors"
+                                >
+                                    ×
+                                </button>
+                            </div>
+                            
+                            {/* Content */}
+                            <div className="text-xs font-medium text-gray-200 line-clamp-2 leading-snug">
+                                {session.task}
+                            </div>
+                            
+                            {/* Footer */}
+                            <div className="flex justify-between items-end mt-1">
+                                <div className={`text-[9px] px-1.5 py-0.5 rounded-sm bg-indigo-500/10 text-indigo-400 border border-indigo-500/20`}>
+                                    {session.durationMinutes}m
+                                </div>
+                            </div>
                         </div>
 
-                        {/* Connection Dot (Visual only) */}
-                        <div className="absolute -right-1 top-1/2 w-2 h-2 bg-gray-600 rounded-full"></div>
-                        <div className="absolute -left-1 top-1/2 w-2 h-2 bg-gray-600 rounded-full"></div>
+                        {/* CONNECTION HANDLE (Right Side) */}
+                        <div 
+                            className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center cursor-crosshair group/handle"
+                            onMouseDown={(e) => handleMouseDownHandle(e, id)}
+                        >
+                            <div className="w-3 h-3 bg-gray-600 rounded-full border-2 border-[#0e0e0e] group-hover/handle:bg-indigo-500 group-hover/handle:scale-125 transition-all"></div>
+                        </div>
+
                     </div>
                 );
             })}
 
         </div>
 
-        {/* HUD */}
-        <div className="absolute bottom-6 right-6 flex gap-2">
-            <div className="bg-black/50 backdrop-blur text-xs text-gray-500 px-3 py-1 rounded border border-white/10">
-                {linkMode.active 
-                    ? (linkMode.sourceId ? 'Select target...' : 'Select source...') 
-                    : 'Drag mode'}
-            </div>
+        {/* Floating Controls */}
+        <div className="absolute top-4 right-4 flex gap-2">
             <Button size="sm" variant="secondary" onClick={() => setPan({x:0, y:0})}>Recenter</Button>
         </div>
 
