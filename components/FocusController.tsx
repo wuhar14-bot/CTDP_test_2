@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { AppStage, ExceptionRule } from '../types';
+import { AppStage, ExceptionRule, TodoItem } from '../types';
 import { Button } from './Button';
 
 interface FocusControllerProps {
@@ -10,12 +10,15 @@ interface FocusControllerProps {
   auxStartTime: number | null;
   focusStartTime: number | null;
   rules: ExceptionRule[];
+  todos: TodoItem[];
   onStartAux: (task: string) => void;
   onStartFocus: () => void;
   onFinishFocus: () => void;
   onCancel: () => void;
   onAddRule: (rule: string) => void;
   onDeleteRule: (id: string) => void;
+  onAddTodo: (text: string) => void;
+  onDeleteTodo: (id: string) => void;
 }
 
 const AUX_DURATION_SEC = 15 * 60; // 15 minutes
@@ -27,17 +30,30 @@ export const FocusController: React.FC<FocusControllerProps> = ({
   auxStartTime,
   focusStartTime,
   rules,
+  todos,
   onStartAux,
   onStartFocus,
   onFinishFocus,
   onCancel,
   onAddRule,
-  onDeleteRule
+  onDeleteRule,
+  onAddTodo,
+  onDeleteTodo
 }) => {
   const [taskInput, setTaskInput] = useState('');
   const [ruleInput, setRuleInput] = useState('');
+  const [todoInput, setTodoInput] = useState('');
+  const [activeTab, setActiveTab] = useState<'backlog' | 'rules'>('backlog');
+
   const [timeLeft, setTimeLeft] = useState(AUX_DURATION_SEC);
   const [elapsed, setElapsed] = useState(0);
+
+  // Sync current task if it changes externally
+  useEffect(() => {
+    if (stage === 'IDLE') {
+        // Reset input logic could go here if needed
+    }
+  }, [stage]);
 
   // Aux Countdown Timer
   useEffect(() => {
@@ -82,45 +98,145 @@ export const FocusController: React.FC<FocusControllerProps> = ({
     }
   };
 
+  const handleTodoSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (todoInput.trim()) {
+      onAddTodo(todoInput);
+      setTodoInput('');
+    }
+  };
+
   // --- STAGE 1: IDLE / PRE-COMMITMENT ---
   if (stage === 'IDLE') {
     return (
-      <div className="p-8 bg-zinc-900/80 backdrop-blur border border-white/10 rounded-2xl shadow-2xl relative overflow-hidden">
+      <div className="bg-zinc-900/80 backdrop-blur border border-white/10 rounded-2xl shadow-2xl relative overflow-hidden flex flex-col">
         {/* Glow effect */}
         <div className="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-purple-500/20 rounded-full blur-3xl pointer-events-none"></div>
 
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <span className="text-2xl">⚡</span> Start Focus Chain
-          </h2>
-          
-          <div className="px-3 py-1 bg-zinc-800 rounded-full border border-white/10 text-xs font-mono text-gray-400">
-            Chain: <span className="text-white font-bold">{chainCount}</span>
-          </div>
+        <div className="p-8 pb-4">
+            <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                <span className="text-2xl">⚡</span> Start Focus Chain
+            </h2>
+            
+            <div className="px-3 py-1 bg-zinc-800 rounded-full border border-white/10 text-xs font-mono text-gray-400">
+                Chain: <span className="text-white font-bold">{chainCount}</span>
+            </div>
+            </div>
+
+            <form onSubmit={handleAuxSubmit} className="space-y-4">
+            <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1 uppercase tracking-wide">
+                What will you focus on?
+                </label>
+                <input
+                type="text"
+                value={taskInput}
+                onChange={(e) => setTaskInput(e.target.value)}
+                placeholder="e.g., Read Research Paper on CTDP"
+                className="w-full bg-zinc-950 border border-white/10 rounded-lg p-4 text-lg text-white placeholder-gray-600 focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all"
+                autoFocus
+                />
+            </div>
+            <div className="flex gap-4 items-center text-sm text-gray-500">
+                <span className="flex items-center gap-1">⏱️ 15m Prep</span>
+                <span className="flex items-center gap-1">🔒 Sacred Seat</span>
+            </div>
+            <Button type="submit" size="lg" className="w-full" disabled={!taskInput.trim()}>
+                Start Auxiliary Chain
+            </Button>
+            </form>
         </div>
 
-        <form onSubmit={handleAuxSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-medium text-gray-400 mb-1 uppercase tracking-wide">
-              What will you focus on?
-            </label>
-            <input
-              type="text"
-              value={taskInput}
-              onChange={(e) => setTaskInput(e.target.value)}
-              placeholder="e.g., Read Research Paper on CTDP"
-              className="w-full bg-zinc-950 border border-white/10 rounded-lg p-4 text-lg text-white placeholder-gray-600 focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all"
-              autoFocus
-            />
-          </div>
-          <div className="flex gap-4 items-center text-sm text-gray-500">
-             <span className="flex items-center gap-1">⏱️ 15m Prep</span>
-             <span className="flex items-center gap-1">🔒 Sacred Seat</span>
-          </div>
-          <Button type="submit" size="lg" className="w-full" disabled={!taskInput.trim()}>
-            Start Auxiliary Chain
-          </Button>
-        </form>
+        {/* --- BACKLOG / RULES TABS --- */}
+        <div className="border-t border-white/5 bg-black/20 mt-2 flex-1 flex flex-col min-h-[300px]">
+            <div className="flex border-b border-white/5">
+                <button 
+                  onClick={() => setActiveTab('backlog')}
+                  className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-colors ${activeTab === 'backlog' ? 'bg-white/5 text-white' : 'text-gray-500 hover:text-gray-300'}`}
+                >
+                    Backlog
+                </button>
+                <button 
+                  onClick={() => setActiveTab('rules')}
+                  className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-colors ${activeTab === 'rules' ? 'bg-white/5 text-white' : 'text-gray-500 hover:text-gray-300'}`}
+                >
+                    Rules
+                </button>
+            </div>
+            
+            <div className="p-4 flex-1 overflow-y-auto max-h-[300px]">
+                {activeTab === 'backlog' ? (
+                    <div className="space-y-4">
+                         <form onSubmit={handleTodoSubmit} className="flex gap-2">
+                            <input
+                                type="text"
+                                value={todoInput}
+                                onChange={(e) => setTodoInput(e.target.value)}
+                                placeholder="Add new task..."
+                                className="flex-1 bg-zinc-950 border border-white/10 rounded px-3 py-2 text-sm text-white focus:border-indigo-500/50 outline-none"
+                            />
+                            <Button type="submit" size="sm" variant="secondary">+</Button>
+                        </form>
+                        <div className="space-y-2">
+                            {todos.length === 0 ? (
+                                <div className="text-gray-600 text-xs italic text-center py-4">No pending tasks.</div>
+                            ) : (
+                                todos.map(todo => (
+                                    <div key={todo.id} className="group flex justify-between items-center bg-zinc-800/30 border border-white/5 p-3 rounded hover:border-indigo-500/30 transition-colors">
+                                        <span className="text-sm text-gray-300">{todo.text}</span>
+                                        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button 
+                                                onClick={() => setTaskInput(todo.text)}
+                                                className="text-[10px] bg-indigo-500/20 text-indigo-400 px-2 py-1 rounded hover:bg-indigo-500/40"
+                                            >
+                                                Select
+                                            </button>
+                                            <button 
+                                                onClick={() => onDeleteTodo(todo.id)}
+                                                className="text-gray-600 hover:text-red-400 px-1"
+                                            >
+                                                ×
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                ) : (
+                    <div className="space-y-4">
+                        <form onSubmit={handleRuleSubmit} className="flex gap-2">
+                            <input
+                                type="text"
+                                value={ruleInput}
+                                onChange={(e) => setRuleInput(e.target.value)}
+                                placeholder="Add exception rule..."
+                                className="flex-1 bg-zinc-950 border border-white/10 rounded px-3 py-2 text-sm text-white focus:border-red-500/50 outline-none"
+                            />
+                            <Button type="submit" size="sm" variant="secondary">+</Button>
+                        </form>
+                        <div className="space-y-2">
+                            {rules.length === 0 ? (
+                                <div className="text-gray-600 text-xs italic text-center py-4">No rules defined.</div>
+                            ) : (
+                                rules.map(rule => (
+                                    <div key={rule.id} className="group relative bg-red-500/5 border border-red-500/10 p-3 rounded text-sm text-gray-300">
+                                        <span className="text-red-400 font-bold mr-2">!</span> {rule.text}
+                                        <button 
+                                            onClick={() => onDeleteRule(rule.id)}
+                                            className="absolute top-2 right-2 text-gray-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        >
+                                            ×
+                                        </button>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
       </div>
     );
   }

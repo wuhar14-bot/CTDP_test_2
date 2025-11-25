@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { AppState, FocusSession, ExceptionRule, STORAGE_KEY, SacredSeatData } from './types';
+import { AppState, FocusSession, ExceptionRule, TodoItem, STORAGE_KEY, SacredSeatData } from './types';
 import { FocusController } from './components/FocusController';
 import { TimeHorizon } from './components/TimeHorizon';
 import { StatsBoard } from './components/StatsBoard';
@@ -55,7 +55,8 @@ const DEMO_SESSIONS: FocusSession[] = [
 const INITIAL_DATA: SacredSeatData = {
   chainCount: 4,
   history: DEMO_SESSIONS,
-  rules: []
+  rules: [],
+  todos: []
 };
 
 const INITIAL_STATE: AppState = {
@@ -87,6 +88,9 @@ export default function App() {
       try {
         const parsed = JSON.parse(saved);
         if (!parsed.data) parsed.data = INITIAL_DATA;
+        // Ensure todos array exists for legacy data
+        if (!parsed.data.todos) parsed.data.todos = [];
+        if (!parsed.data.rules) parsed.data.rules = [];
         setState(parsed);
       } catch (e) {
         console.error("Failed to load state", e);
@@ -136,7 +140,7 @@ export default function App() {
         focusStartTime: null,
         data: {
             ...prev.data,
-            chainCount: 0
+            chainCount: 0 // Penalty: Reset chain
         }
       }));
     }
@@ -228,11 +232,29 @@ export default function App() {
     updateData(data => ({ ...data, rules: data.rules.filter(r => r.id !== id) }));
   };
 
+  // --- Todo Mgmt ---
+
+  const addTodo = (text: string) => {
+    const newItem: TodoItem = {
+      id: generateId(),
+      text,
+      createdAt: new Date().toISOString()
+    };
+    updateData(data => ({ ...data, todos: [newItem, ...data.todos] }));
+  };
+
+  const deleteTodo = (id: string) => {
+    updateData(data => ({ ...data, todos: data.todos.filter(t => t.id !== id) }));
+  };
+
   const deleteSession = (id: string) => {
     updateData(data => ({ ...data, history: data.history.filter(s => s.id !== id) }));
   };
 
   const importData = (newData: SacredSeatData) => {
+    // Merge or replace logic - for now replace, but ensure structures exist
+    if (!newData.todos) newData.todos = [];
+    if (!newData.rules) newData.rules = [];
     setState(prev => ({ ...prev, data: newData }));
   };
 
@@ -280,12 +302,15 @@ export default function App() {
                 auxStartTime={state.auxStartTime}
                 focusStartTime={state.focusStartTime}
                 rules={state.data.rules}
+                todos={state.data.todos}
                 onStartAux={startAuxChain}
                 onStartFocus={startFocus}
                 onFinishFocus={finishFocus}
                 onCancel={cancelSession}
                 onAddRule={addRule}
                 onDeleteRule={deleteRule}
+                onAddTodo={addTodo}
+                onDeleteTodo={deleteTodo}
               />
           </div>
         ) : (
@@ -301,12 +326,15 @@ export default function App() {
                 auxStartTime={state.auxStartTime}
                 focusStartTime={state.focusStartTime}
                 rules={state.data.rules}
+                todos={state.data.todos}
                 onStartAux={startAuxChain}
                 onStartFocus={startFocus}
                 onFinishFocus={finishFocus}
                 onCancel={cancelSession}
                 onAddRule={addRule}
                 onDeleteRule={deleteRule}
+                onAddTodo={addTodo}
+                onDeleteTodo={deleteTodo}
               />
               
               {/* Tip Card */}

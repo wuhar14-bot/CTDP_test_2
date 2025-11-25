@@ -22,10 +22,17 @@ export interface ExceptionRule {
   createdAt: string;
 }
 
+export interface TodoItem {
+  id: string;
+  text: string;
+  createdAt: string;
+}
+
 export interface SacredSeatData {
   chainCount: number;
   history: FocusSession[];
   rules: ExceptionRule[];
+  todos: TodoItem[];
   mindMapLayout?: Record<string, NodeLayout>;
 }
 
