@@ -8,6 +8,7 @@ export interface FocusSession {
   endTime: string; // ISO String
   durationMinutes: number;
   status?: 'completed' | 'planned';
+  steps?: string[];
 }
 
 export interface NodeLayout {
@@ -39,6 +40,7 @@ export interface SacredSeatData {
 export interface AppState {
   stage: AppStage;
   currentTask: string;
+  currentSteps: string[];
   auxStartTime: number | null; // Timestamp
   focusStartTime: number | null; // Timestamp
   data: SacredSeatData;

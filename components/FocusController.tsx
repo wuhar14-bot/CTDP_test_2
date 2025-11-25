@@ -6,6 +6,7 @@ import { Button } from './Button';
 interface FocusControllerProps {
   stage: AppStage;
   currentTask: string;
+  currentSteps: string[];
   chainCount: number;
   auxStartTime: number | null;
   focusStartTime: number | null;
@@ -19,6 +20,8 @@ interface FocusControllerProps {
   onDeleteRule: (id: string) => void;
   onAddTodo: (text: string) => void;
   onDeleteTodo: (id: string) => void;
+  onAddStep: (step: string) => void;
+  onDeleteStep: (index: number) => void;
 }
 
 const AUX_DURATION_SEC = 15 * 60; // 15 minutes
@@ -26,6 +29,7 @@ const AUX_DURATION_SEC = 15 * 60; // 15 minutes
 export const FocusController: React.FC<FocusControllerProps> = ({
   stage,
   currentTask,
+  currentSteps,
   chainCount,
   auxStartTime,
   focusStartTime,
@@ -38,12 +42,18 @@ export const FocusController: React.FC<FocusControllerProps> = ({
   onAddRule,
   onDeleteRule,
   onAddTodo,
-  onDeleteTodo
+  onDeleteTodo,
+  onAddStep,
+  onDeleteStep
 }) => {
   const [taskInput, setTaskInput] = useState('');
   const [ruleInput, setRuleInput] = useState('');
   const [todoInput, setTodoInput] = useState('');
+  const [stepInput, setStepInput] = useState('');
+  
+  // Tab states
   const [activeTab, setActiveTab] = useState<'backlog' | 'rules'>('backlog');
+  const [focusTab, setFocusTab] = useState<'steps' | 'rules'>('steps');
 
   const [timeLeft, setTimeLeft] = useState(AUX_DURATION_SEC);
   const [elapsed, setElapsed] = useState(0);
@@ -103,6 +113,14 @@ export const FocusController: React.FC<FocusControllerProps> = ({
     if (todoInput.trim()) {
       onAddTodo(todoInput);
       setTodoInput('');
+    }
+  };
+
+  const handleStepSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (stepInput.trim()) {
+        onAddStep(stepInput);
+        setStepInput('');
     }
   };
 
@@ -276,9 +294,9 @@ export const FocusController: React.FC<FocusControllerProps> = ({
 
   // --- STAGE 3: ACTIVE FOCUS (SACRED SEAT) ---
   return (
-    <div className="flex flex-col md:flex-row gap-6">
+    <div className="flex flex-col md:flex-row gap-6 h-[calc(100vh-140px)] min-h-[500px]">
       {/* Main Focus Card */}
-      <div className="flex-1 p-8 bg-black border border-indigo-500/30 rounded-2xl shadow-[0_0_50px_rgba(99,102,241,0.15)] relative overflow-hidden flex flex-col items-center justify-center min-h-[400px]">
+      <div className="flex-1 p-8 bg-black border border-indigo-500/30 rounded-2xl shadow-[0_0_50px_rgba(99,102,241,0.15)] relative overflow-hidden flex flex-col items-center justify-center">
         {/* Ambient Background */}
         <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/10 via-transparent to-purple-900/10 pointer-events-none"></div>
         
@@ -307,45 +325,99 @@ export const FocusController: React.FC<FocusControllerProps> = ({
         </div>
       </div>
 
-      {/* Rules / Exceptions Side Panel */}
-      <div className="w-full md:w-80 bg-zinc-900/50 border border-white/5 rounded-2xl p-6 flex flex-col">
-        <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">
-          Exception Rules
-        </h3>
-        
-        <div className="flex-1 overflow-y-auto mb-4 space-y-2 max-h-[250px] hide-scrollbar">
-          {rules.length === 0 ? (
-            <div className="text-gray-600 text-sm italic text-center py-4">No exceptions recorded yet.</div>
-          ) : (
-            rules.map(rule => (
-              <div key={rule.id} className="bg-red-500/5 border border-red-500/10 rounded p-3 text-sm text-gray-300 group relative">
-                 <span className="text-red-400 font-bold mr-2">!</span> {rule.text}
-                 <button 
-                  onClick={() => onDeleteRule(rule.id)}
-                  className="absolute top-2 right-2 text-gray-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
-                 >
-                   ×
-                 </button>
-              </div>
-            ))
-          )}
+      {/* Side Panel (Tabs: Steps vs Rules) */}
+      <div className="w-full md:w-80 bg-zinc-900/50 border border-white/5 rounded-2xl flex flex-col overflow-hidden">
+        {/* Tab Header */}
+        <div className="flex border-b border-white/5">
+            <button 
+                onClick={() => setFocusTab('steps')}
+                className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-colors ${focusTab === 'steps' ? 'bg-white/5 text-white' : 'text-gray-500 hover:text-gray-300'}`}
+            >
+                Steps
+            </button>
+            <button 
+                onClick={() => setFocusTab('rules')}
+                className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-colors ${focusTab === 'rules' ? 'bg-white/5 text-white' : 'text-gray-500 hover:text-gray-300'}`}
+            >
+                Rules
+            </button>
         </div>
 
-        <form onSubmit={handleRuleSubmit} className="mt-auto">
-          <label className="block text-xs text-gray-500 mb-2">
-            "Exception Becomes Rule" Principle
-          </label>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={ruleInput}
-              onChange={(e) => setRuleInput(e.target.value)}
-              placeholder="Add new rule..."
-              className="flex-1 bg-zinc-950 border border-white/10 rounded px-3 py-2 text-sm text-white focus:border-red-500/50 outline-none"
-            />
-            <Button type="submit" size="sm" variant="secondary">+</Button>
-          </div>
-        </form>
+        {/* Tab Content */}
+        <div className="flex-1 p-4 flex flex-col min-h-0">
+            {focusTab === 'steps' ? (
+                // STEPS CONTENT
+                <>
+                    <div className="flex-1 overflow-y-auto mb-4 space-y-2 hide-scrollbar">
+                        {currentSteps.length === 0 ? (
+                            <div className="text-gray-600 text-sm italic text-center py-4">
+                                No steps recorded. <br/> Log your actions here.
+                            </div>
+                        ) : (
+                            currentSteps.map((step, idx) => (
+                                <div key={idx} className="bg-zinc-800/50 border border-white/5 rounded p-2 text-sm text-gray-300 flex justify-between items-start group">
+                                    <span className="flex-1 break-words mr-2">
+                                        <span className="text-indigo-500/50 mr-2">{idx + 1}.</span>
+                                        {step}
+                                    </span>
+                                    <button 
+                                        onClick={() => onDeleteStep(idx)}
+                                        className="text-gray-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity px-1"
+                                    >
+                                        ×
+                                    </button>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                    <form onSubmit={handleStepSubmit} className="mt-auto">
+                        <div className="flex gap-2">
+                            <input
+                                type="text"
+                                value={stepInput}
+                                onChange={(e) => setStepInput(e.target.value)}
+                                placeholder="Record action..."
+                                className="flex-1 bg-zinc-950 border border-white/10 rounded px-3 py-2 text-sm text-white focus:border-indigo-500/50 outline-none"
+                            />
+                            <Button type="submit" size="sm" variant="secondary">→</Button>
+                        </div>
+                    </form>
+                </>
+            ) : (
+                // RULES CONTENT
+                <>
+                     <div className="flex-1 overflow-y-auto mb-4 space-y-2 hide-scrollbar">
+                        {rules.length === 0 ? (
+                            <div className="text-gray-600 text-sm italic text-center py-4">No exceptions recorded.</div>
+                        ) : (
+                            rules.map(rule => (
+                                <div key={rule.id} className="bg-red-500/5 border border-red-500/10 rounded p-3 text-sm text-gray-300 group relative">
+                                    <span className="text-red-400 font-bold mr-2">!</span> {rule.text}
+                                    <button 
+                                        onClick={() => onDeleteRule(rule.id)}
+                                        className="absolute top-2 right-2 text-gray-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    >
+                                        ×
+                                    </button>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                    <form onSubmit={handleRuleSubmit} className="mt-auto">
+                        <div className="flex gap-2">
+                            <input
+                                type="text"
+                                value={ruleInput}
+                                onChange={(e) => setRuleInput(e.target.value)}
+                                placeholder="Add rule..."
+                                className="flex-1 bg-zinc-950 border border-white/10 rounded px-3 py-2 text-sm text-white focus:border-red-500/50 outline-none"
+                            />
+                            <Button type="submit" size="sm" variant="secondary">+</Button>
+                        </div>
+                    </form>
+                </>
+            )}
+        </div>
       </div>
     </div>
   );

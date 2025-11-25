@@ -24,7 +24,8 @@ const DEMO_SESSIONS: FocusSession[] = [
     startTime: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(), // 2 days ago
     endTime: new Date(Date.now() - 1000 * 60 * 60 * 23.5 * 2).toISOString(),
     durationMinutes: 45,
-    status: 'completed'
+    status: 'completed',
+    steps: ['Read documentation', 'Summarized key points']
   },
   {
     id: DEMO_ID_2,
@@ -62,6 +63,7 @@ const INITIAL_DATA: SacredSeatData = {
 const INITIAL_STATE: AppState = {
   stage: 'IDLE',
   currentTask: '',
+  currentSteps: [],
   auxStartTime: null,
   focusStartTime: null,
   data: INITIAL_DATA
@@ -88,9 +90,10 @@ export default function App() {
       try {
         const parsed = JSON.parse(saved);
         if (!parsed.data) parsed.data = INITIAL_DATA;
-        // Ensure todos array exists for legacy data
+        // Ensure arrays exist for legacy data
         if (!parsed.data.todos) parsed.data.todos = [];
         if (!parsed.data.rules) parsed.data.rules = [];
+        if (!parsed.currentSteps) parsed.currentSteps = [];
         setState(parsed);
       } catch (e) {
         console.error("Failed to load state", e);
@@ -118,6 +121,7 @@ export default function App() {
       ...prev,
       stage: 'AUX_COUNTDOWN',
       currentTask: task,
+      currentSteps: [],
       auxStartTime: Date.now()
     }));
   };
@@ -136,6 +140,7 @@ export default function App() {
         ...prev,
         stage: 'IDLE',
         currentTask: '',
+        currentSteps: [],
         auxStartTime: null,
         focusStartTime: null,
         data: {
@@ -158,6 +163,7 @@ export default function App() {
                 ...prev,
                 stage: 'IDLE',
                 currentTask: '',
+                currentSteps: [],
                 auxStartTime: null,
                 focusStartTime: null,
             }));
@@ -169,6 +175,7 @@ export default function App() {
     const newSession: FocusSession = {
       id: generateId(),
       task: state.currentTask,
+      steps: state.currentSteps,
       startTime: new Date(state.focusStartTime).toISOString(),
       endTime: new Date(endTime).toISOString(),
       durationMinutes,
@@ -179,6 +186,7 @@ export default function App() {
       ...prev,
       stage: 'IDLE',
       currentTask: '',
+      currentSteps: [],
       auxStartTime: null,
       focusStartTime: null,
       data: {
@@ -186,6 +194,22 @@ export default function App() {
         chainCount: prev.data.chainCount + 1,
         history: [...prev.data.history, newSession]
       }
+    }));
+  };
+
+  // --- Step Actions ---
+
+  const addStep = (step: string) => {
+    setState(prev => ({
+      ...prev,
+      currentSteps: [...prev.currentSteps, step]
+    }));
+  };
+
+  const deleteStep = (index: number) => {
+    setState(prev => ({
+      ...prev,
+      currentSteps: prev.currentSteps.filter((_, i) => i !== index)
     }));
   };
 
@@ -298,6 +322,7 @@ export default function App() {
              <FocusController
                 stage={state.stage}
                 currentTask={state.currentTask}
+                currentSteps={state.currentSteps}
                 chainCount={state.data.chainCount}
                 auxStartTime={state.auxStartTime}
                 focusStartTime={state.focusStartTime}
@@ -311,17 +336,20 @@ export default function App() {
                 onDeleteRule={deleteRule}
                 onAddTodo={addTodo}
                 onDeleteTodo={deleteTodo}
+                onAddStep={addStep}
+                onDeleteStep={deleteStep}
               />
           </div>
         ) : (
           // MODE B: COCKPIT MODE (Split View)
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             
-            {/* LEFT COLUMN: ACTION (Focus Controller) - INCREASED WIDTH (col-span-4 -> col-span-5) */}
+            {/* LEFT COLUMN: ACTION (Focus Controller) */}
             <div className="lg:col-span-5 space-y-6 sticky top-24">
                <FocusController
                 stage={state.stage}
                 currentTask={state.currentTask}
+                currentSteps={state.currentSteps}
                 chainCount={state.data.chainCount}
                 auxStartTime={state.auxStartTime}
                 focusStartTime={state.focusStartTime}
@@ -335,6 +363,8 @@ export default function App() {
                 onDeleteRule={deleteRule}
                 onAddTodo={addTodo}
                 onDeleteTodo={deleteTodo}
+                onAddStep={addStep}
+                onDeleteStep={deleteStep}
               />
               
               {/* Tip Card */}
@@ -344,17 +374,17 @@ export default function App() {
               </div>
             </div>
 
-            {/* RIGHT COLUMN: CONTEXT (Stats & Timeline) - DECREASED WIDTH (col-span-8 -> col-span-7) */}
+            {/* RIGHT COLUMN: CONTEXT (Stats & Timeline) */}
             <div className="lg:col-span-7 space-y-6">
                
-               {/* 1. Plan Future (Horizon) - Moved to Top */}
+               {/* 1. Plan Future (Horizon) */}
                <TimeHorizon 
                  sessions={state.data.history} 
                  onDeleteSession={deleteSession} 
                  onBookSlot={openBooking}
                />
 
-               {/* 2. Review Past (Stats) - Moved Below */}
+               {/* 2. Review Past (Stats) */}
                <StatsBoard 
                   sessions={state.data.history} 
                   onSlotClick={openSlotDetails}
