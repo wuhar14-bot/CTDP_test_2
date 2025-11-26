@@ -28,6 +28,8 @@ export const TimeHorizon: React.FC<TimeHorizonProps> = ({ sessions, onDeleteSess
         return 'from-emerald-500 to-teal-500'; // Green
       case 'work':
         return 'from-amber-500 to-yellow-500'; // Yellow
+      case 'infrastructure':
+        return 'from-slate-600 to-gray-600'; // Gray
       default:
         return 'from-indigo-600 to-purple-600'; // Default to research
     }

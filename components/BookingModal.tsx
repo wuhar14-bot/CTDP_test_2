@@ -70,11 +70,11 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
           <div>
             <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Category</label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
                 onClick={() => setCategory('research')}
-                className={`p-2.5 rounded-lg text-xs font-bold transition-all ${
+                className={`p-2 rounded-lg text-xs font-bold transition-all ${
                   category === 'research'
                     ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg'
                     : 'bg-zinc-800 text-gray-400 hover:bg-zinc-700'
@@ -84,8 +84,30 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               </button>
               <button
                 type="button"
+                onClick={() => setCategory('work')}
+                className={`p-2 rounded-lg text-xs font-bold transition-all ${
+                  category === 'work'
+                    ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-white shadow-lg'
+                    : 'bg-zinc-800 text-gray-400 hover:bg-zinc-700'
+                }`}
+              >
+                Work
+              </button>
+              <button
+                type="button"
+                onClick={() => setCategory('infrastructure')}
+                className={`p-2 rounded-lg text-xs font-bold transition-all ${
+                  category === 'infrastructure'
+                    ? 'bg-gradient-to-r from-slate-600 to-gray-600 text-white shadow-lg'
+                    : 'bg-zinc-800 text-gray-400 hover:bg-zinc-700'
+                }`}
+              >
+                Infrastructure
+              </button>
+              <button
+                type="button"
                 onClick={() => setCategory('exercise')}
-                className={`p-2.5 rounded-lg text-xs font-bold transition-all ${
+                className={`p-2 rounded-lg text-xs font-bold transition-all ${
                   category === 'exercise'
                     ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg'
                     : 'bg-zinc-800 text-gray-400 hover:bg-zinc-700'
@@ -96,24 +118,13 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               <button
                 type="button"
                 onClick={() => setCategory('eating')}
-                className={`p-2.5 rounded-lg text-xs font-bold transition-all ${
+                className={`p-2 rounded-lg text-xs font-bold transition-all ${
                   category === 'eating'
                     ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg'
                     : 'bg-zinc-800 text-gray-400 hover:bg-zinc-700'
                 }`}
               >
                 Eating
-              </button>
-              <button
-                type="button"
-                onClick={() => setCategory('work')}
-                className={`p-2.5 rounded-lg text-xs font-bold transition-all ${
-                  category === 'work'
-                    ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-white shadow-lg'
-                    : 'bg-zinc-800 text-gray-400 hover:bg-zinc-700'
-                }`}
-              >
-                Work
               </button>
             </div>
           </div>

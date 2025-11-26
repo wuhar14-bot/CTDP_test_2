@@ -161,11 +161,11 @@ export const FocusController: React.FC<FocusControllerProps> = ({
                 <label className="block text-xs font-medium text-gray-400 mb-2 uppercase tracking-wide">
                 Category
                 </label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-3 gap-2">
                     <button
                         type="button"
                         onClick={() => setCategoryInput('research')}
-                        className={`p-3 rounded-lg text-xs font-bold transition-all ${
+                        className={`p-2.5 rounded-lg text-xs font-bold transition-all ${
                             categoryInput === 'research'
                                 ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg'
                                 : 'bg-zinc-800 text-gray-400 hover:bg-zinc-700'
@@ -175,8 +175,30 @@ export const FocusController: React.FC<FocusControllerProps> = ({
                     </button>
                     <button
                         type="button"
+                        onClick={() => setCategoryInput('work')}
+                        className={`p-2.5 rounded-lg text-xs font-bold transition-all ${
+                            categoryInput === 'work'
+                                ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-white shadow-lg'
+                                : 'bg-zinc-800 text-gray-400 hover:bg-zinc-700'
+                        }`}
+                    >
+                        Work
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setCategoryInput('infrastructure')}
+                        className={`p-2.5 rounded-lg text-xs font-bold transition-all ${
+                            categoryInput === 'infrastructure'
+                                ? 'bg-gradient-to-r from-slate-600 to-gray-600 text-white shadow-lg'
+                                : 'bg-zinc-800 text-gray-400 hover:bg-zinc-700'
+                        }`}
+                    >
+                        Infrastructure
+                    </button>
+                    <button
+                        type="button"
                         onClick={() => setCategoryInput('exercise')}
-                        className={`p-3 rounded-lg text-xs font-bold transition-all ${
+                        className={`p-2.5 rounded-lg text-xs font-bold transition-all ${
                             categoryInput === 'exercise'
                                 ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg'
                                 : 'bg-zinc-800 text-gray-400 hover:bg-zinc-700'
@@ -187,24 +209,13 @@ export const FocusController: React.FC<FocusControllerProps> = ({
                     <button
                         type="button"
                         onClick={() => setCategoryInput('eating')}
-                        className={`p-3 rounded-lg text-xs font-bold transition-all ${
+                        className={`p-2.5 rounded-lg text-xs font-bold transition-all ${
                             categoryInput === 'eating'
                                 ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg'
                                 : 'bg-zinc-800 text-gray-400 hover:bg-zinc-700'
                         }`}
                     >
                         Eating
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setCategoryInput('work')}
-                        className={`p-3 rounded-lg text-xs font-bold transition-all ${
-                            categoryInput === 'work'
-                                ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-white shadow-lg'
-                                : 'bg-zinc-800 text-gray-400 hover:bg-zinc-700'
-                        }`}
-                    >
-                        Work
                     </button>
                 </div>
             </div>

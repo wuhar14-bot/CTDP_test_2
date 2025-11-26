@@ -43,6 +43,8 @@ export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
         return 'from-emerald-500 to-teal-500';
       case 'work':
         return 'from-amber-500 to-yellow-500';
+      case 'infrastructure':
+        return 'from-slate-600 to-gray-600';
       default:
         return 'from-indigo-600 to-purple-600';
     }
@@ -135,7 +137,7 @@ export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
 
                                 <div>
                                     <label className="text-[10px] text-gray-500 uppercase font-bold mb-2 block">Category</label>
-                                    <div className="grid grid-cols-2 gap-2">
+                                    <div className="flex flex-col gap-1.5">
                                         <button
                                             type="button"
                                             onClick={() => setEditForm({...editForm, category: 'research'})}
@@ -146,6 +148,28 @@ export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
                                             }`}
                                         >
                                             Research
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setEditForm({...editForm, category: 'work'})}
+                                            className={`p-2 rounded-lg text-xs font-bold transition-all ${
+                                                editForm.category === 'work'
+                                                    ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-white shadow-lg'
+                                                    : 'bg-zinc-700 text-gray-400 hover:bg-zinc-600'
+                                            }`}
+                                        >
+                                            Work
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setEditForm({...editForm, category: 'infrastructure'})}
+                                            className={`p-2 rounded-lg text-xs font-bold transition-all ${
+                                                editForm.category === 'infrastructure'
+                                                    ? 'bg-gradient-to-r from-slate-600 to-gray-600 text-white shadow-lg'
+                                                    : 'bg-zinc-700 text-gray-400 hover:bg-zinc-600'
+                                            }`}
+                                        >
+                                            Infrastructure
                                         </button>
                                         <button
                                             type="button"
@@ -168,17 +192,6 @@ export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
                                             }`}
                                         >
                                             Eating
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setEditForm({...editForm, category: 'work'})}
-                                            className={`p-2 rounded-lg text-xs font-bold transition-all ${
-                                                editForm.category === 'work'
-                                                    ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-white shadow-lg'
-                                                    : 'bg-zinc-700 text-gray-400 hover:bg-zinc-600'
-                                            }`}
-                                        >
-                                            Work
                                         </button>
                                     </div>
                                 </div>

@@ -1,7 +1,7 @@
 
 export type AppStage = 'IDLE' | 'AUX_COUNTDOWN' | 'FOCUS';
 
-export type TaskCategory = 'research' | 'exercise' | 'eating' | 'work';
+export type TaskCategory = 'research' | 'exercise' | 'eating' | 'work' | 'infrastructure';
 
 export interface FocusSession {
   id: string;
