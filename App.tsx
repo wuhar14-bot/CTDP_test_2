@@ -395,6 +395,7 @@ export default function App() {
                  sessions={state.data.history} 
                  onDeleteSession={deleteSession} 
                  onBookSlot={openBooking}
+                 onSessionClick={(session) => openSlotDetails('Session Details', [session])}
                />
 
                {/* 2. Review Past (Stats) */}

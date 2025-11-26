@@ -6,6 +6,7 @@ interface TimeHorizonProps {
   sessions: FocusSession[];
   onDeleteSession: (sessionId: string) => void;
   onBookSlot: (date: Date, hour: number) => void;
+  onSessionClick: (session: FocusSession) => void;
 }
 
 // Config
@@ -13,7 +14,7 @@ const START_HOUR = 6; // 6 AM
 const TOTAL_HOURS = 18; // Span 18 hours
 const END_HOUR = START_HOUR + TOTAL_HOURS; // Until Midnight
 
-export const TimeHorizon: React.FC<TimeHorizonProps> = ({ sessions, onDeleteSession, onBookSlot }) => {
+export const TimeHorizon: React.FC<TimeHorizonProps> = ({ sessions, onDeleteSession, onBookSlot, onSessionClick }) => {
   const [weekOffset, setWeekOffset] = useState(0);
 
   // Generate Rolling Window based on offset
@@ -202,14 +203,14 @@ export const TimeHorizon: React.FC<TimeHorizonProps> = ({ sessions, onDeleteSess
                                     <div
                                         key={session.id}
                                         style={style}
-                                        title={`${session.task} (${session.durationMinutes}m)`}
+                                        title={`${session.task} (${session.durationMinutes}m) - Click to edit`}
                                         onClick={(e) => {
-                                            // Optional: click to edit? For now stop propagation
                                             e.stopPropagation();
+                                            onSessionClick(session);
                                         }}
-                                        className={`absolute top-1 bottom-1 rounded-md shadow-sm flex items-center justify-center group/item transition-all
+                                        className={`absolute top-1 bottom-1 rounded-md shadow-sm flex items-center justify-center group/item transition-all cursor-pointer
                                             ${isPlanned 
-                                                ? 'border-2 border-dashed border-gray-600 bg-transparent text-gray-400' 
+                                                ? 'border-2 border-dashed border-gray-600 bg-transparent text-gray-400 hover:border-gray-400' 
                                                 : 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:brightness-110 z-10'
                                             }
                                         `}
@@ -225,6 +226,7 @@ export const TimeHorizon: React.FC<TimeHorizonProps> = ({ sessions, onDeleteSess
                                                 if(confirm(`Delete "${session.task}"?`)) onDeleteSession(session.id);
                                             }}
                                             className="absolute -top-2 -right-2 w-5 h-5 flex items-center justify-center opacity-0 group-hover/item:opacity-100 bg-red-500 rounded-full text-white text-[10px] cursor-pointer hover:bg-red-600 shadow-md z-50"
+                                            title="Delete Session"
                                         >
                                             ×
                                         </div>
