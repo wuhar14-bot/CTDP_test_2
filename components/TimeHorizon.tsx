@@ -191,7 +191,7 @@ export const TimeHorizon: React.FC<TimeHorizonProps> = ({ sessions, onDeleteSess
 
                         {/* Timeline Track */}
                         <div 
-                            className={`flex-1 h-full rounded-lg relative overflow-hidden transition-colors cursor-crosshair ${isToday ? 'bg-indigo-500/5' : 'bg-white/5 hover:bg-white/10'}`}
+                            className={`flex-1 h-full rounded-lg relative transition-colors cursor-crosshair ${isToday ? 'bg-indigo-500/5' : 'bg-white/5 hover:bg-white/10'}`}
                             onClick={(e) => handleTrackClick(e, date)}
                             title="Click to book a session"
                         >
@@ -203,29 +203,48 @@ export const TimeHorizon: React.FC<TimeHorizonProps> = ({ sessions, onDeleteSess
                                     <div
                                         key={session.id}
                                         style={style}
-                                        title={`${session.task} (${session.durationMinutes}m) - Click to edit`}
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             onSessionClick(session);
                                         }}
-                                        className={`absolute top-1 bottom-1 rounded-md shadow-sm flex items-center justify-center group/item transition-all cursor-pointer
+                                        className={`absolute top-1 bottom-1 rounded-md shadow-sm flex flex-col justify-center group/item transition-all duration-300 ease-out cursor-pointer overflow-hidden hover:!w-72 hover:!h-auto hover:min-h-[90%] hover:shadow-[0_10px_30px_rgba(0,0,0,0.5)] hover:rounded-xl
                                             ${isPlanned 
-                                                ? 'border-2 border-dashed border-gray-600 bg-transparent text-gray-400 hover:border-gray-400' 
-                                                : 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:brightness-110 z-10'
+                                                ? 'border-2 border-dashed border-gray-600 bg-zinc-900/90 text-gray-400 hover:border-gray-400 hover:z-50' 
+                                                : 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white z-10 hover:z-50 hover:brightness-110'
                                             }
                                         `}
                                     >
-                                        <div className="text-xs font-bold truncate px-2 opacity-100 select-none pointer-events-none">
-                                            {session.task}
+                                        <div className="w-full px-2 flex items-center justify-between group-hover/item:items-start group-hover/item:flex-col group-hover/item:gap-1 group-hover/item:p-3">
+                                            <div className="text-xs font-bold truncate w-full group-hover/item:whitespace-normal group-hover/item:text-sm group-hover/item:leading-tight">
+                                                {session.task}
+                                            </div>
+                                            
+                                            {/* Details on Hover */}
+                                            <div className="hidden group-hover/item:block w-full border-t border-white/20 pt-2 mt-1 animate-in fade-in slide-in-from-top-1 duration-200">
+                                                <div className="flex justify-between text-[10px] opacity-80 mb-2 font-mono">
+                                                    <span>{session.durationMinutes} min</span>
+                                                    <span>{new Date(session.startTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+                                                </div>
+                                                
+                                                {session.steps && session.steps.length > 0 && (
+                                                    <div className="space-y-1">
+                                                        <p className="text-[9px] uppercase tracking-wider opacity-50 font-bold">Log</p>
+                                                        <ul className="text-[10px] space-y-0.5 opacity-90 list-disc list-inside">
+                                                            {session.steps.slice(0,3).map((s,i) => <li key={i} className="truncate">{s}</li>)}
+                                                            {session.steps.length > 3 && <li className="italic opacity-50">+{session.steps.length - 3} more</li>}
+                                                        </ul>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
 
-                                        {/* Delete Action (Top right) */}
+                                        {/* Delete Action */}
                                         <div 
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 if(confirm(`Delete "${session.task}"?`)) onDeleteSession(session.id);
                                             }}
-                                            className="absolute -top-2 -right-2 w-5 h-5 flex items-center justify-center opacity-0 group-hover/item:opacity-100 bg-red-500 rounded-full text-white text-[10px] cursor-pointer hover:bg-red-600 shadow-md z-50"
+                                            className="absolute top-2 right-2 w-5 h-5 flex items-center justify-center opacity-0 group-hover/item:opacity-100 bg-red-500 rounded-full text-white text-[10px] cursor-pointer hover:bg-red-600 shadow-md z-50"
                                             title="Delete Session"
                                         >
                                             ×

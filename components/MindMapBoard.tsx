@@ -367,7 +367,7 @@ export const MindMapBoard: React.FC<MindMapBoardProps> = ({
                         <div className={`
                              w-full h-full bg-[#1a1a1a] border rounded-lg p-3 shadow-xl flex flex-col justify-between relative z-10 overflow-hidden
                              transition-all duration-300
-                             ${isDragging ? 'border-indigo-500 shadow-indigo-500/20 scale-105' : 'border-white/10 group-hover/node:border-indigo-500/50 group-hover/node:w-[400px] group-hover/node:h-auto group-hover/node:bg-zinc-900 group-hover/node:shadow-2xl'}
+                             ${isDragging ? 'border-indigo-500 shadow-indigo-500/20 scale-105' : 'border-white/10 group-hover/node:border-indigo-500/50 group-hover/node:w-[400px] group-hover/node:-translate-x-[90px] group-hover/node:h-auto group-hover/node:bg-zinc-900 group-hover/node:shadow-2xl'}
                         `}>
                             <div className="flex justify-between items-start pointer-events-auto shrink-0">
                                 <span className="text-[9px] font-mono text-gray-500 uppercase tracking-widest">
@@ -383,8 +383,8 @@ export const MindMapBoard: React.FC<MindMapBoardProps> = ({
                             </div>
                             
                             {/* Content Expansion on Hover */}
-                            <div className="flex flex-col gap-2 mt-1">
-                                <div className={`text-xs font-medium text-gray-200 leading-snug group-hover/node:whitespace-normal group-hover/node:text-sm ${isDragging ? 'line-clamp-2' : 'line-clamp-2 group-hover/node:line-clamp-none'}`}>
+                            <div className="flex flex-col gap-2 mt-4 transition-all">
+                                <div className={`text-xs font-medium text-gray-200 leading-snug group-hover/node:whitespace-normal ${isDragging ? 'line-clamp-2' : 'line-clamp-2 group-hover/node:line-clamp-none'}`}>
                                     {session.task}
                                 </div>
                                 
