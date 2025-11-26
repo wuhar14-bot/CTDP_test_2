@@ -199,15 +199,25 @@ export const TimeHorizon: React.FC<TimeHorizonProps> = ({ sessions, onDeleteSess
                                 const style = getSessionStyle(session);
                                 const isPlanned = session.status === 'planned';
 
+                                // Calculate dynamic width based on text length
+                                // Rough estimate: 8px per character for text-sm font, with min 288px and max 600px
+                                const charLength = session.task.length;
+                                const calculatedWidth = Math.max(288, Math.min(600, charLength * 8 + 80));
+                                const hoverWidth = `${calculatedWidth}px`;
+
                                 return (
                                     <div
                                         key={session.id}
-                                        style={style}
+                                        style={{
+                                            ...style,
+                                            '--hover-width': hoverWidth
+                                        } as React.CSSProperties & { '--hover-width': string }}
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             onSessionClick(session);
                                         }}
-                                        className={`absolute top-1 bottom-1 rounded-md shadow-sm flex flex-col justify-center group/item transition-all duration-300 ease-out cursor-pointer overflow-hidden hover:!w-72 hover:!-translate-x-[35%] hover:!h-auto hover:min-h-[90%] hover:shadow-[0_10px_30px_rgba(0,0,0,0.5)] hover:rounded-xl
+                                        className={`absolute top-1 bottom-1 rounded-md shadow-sm flex flex-col justify-center group/item transition-all duration-300 ease-out cursor-pointer overflow-hidden hover:!-translate-x-[35%] hover:!h-auto hover:min-h-[90%] hover:shadow-[0_10px_30px_rgba(0,0,0,0.5)] hover:rounded-xl
+                                        [&:hover]:!w-[var(--hover-width)]
                                             ${isPlanned
                                                 ? 'border-2 border-dashed border-gray-600 bg-zinc-900/90 text-gray-400 hover:border-gray-400 hover:z-50'
                                                 : 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white z-10 hover:z-50 hover:brightness-110'
