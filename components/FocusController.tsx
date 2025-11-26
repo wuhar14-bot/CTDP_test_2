@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { AppStage, ExceptionRule, TodoItem } from '../types';
+import { AppStage, ExceptionRule, TodoItem, TaskCategory } from '../types';
 import { Button } from './Button';
 
 interface FocusControllerProps {
@@ -12,7 +12,7 @@ interface FocusControllerProps {
   focusStartTime: number | null;
   rules: ExceptionRule[];
   todos: TodoItem[];
-  onStartAux: (task: string) => void;
+  onStartAux: (task: string, category?: TaskCategory) => void;
   onStartFocus: () => void;
   onFinishFocus: () => void;
   onCancel: () => void;
@@ -50,7 +50,8 @@ export const FocusController: React.FC<FocusControllerProps> = ({
   const [ruleInput, setRuleInput] = useState('');
   const [todoInput, setTodoInput] = useState('');
   const [stepInput, setStepInput] = useState('');
-  
+  const [categoryInput, setCategoryInput] = useState<TaskCategory>('research');
+
   // Tab states for IDLE mode
   const [activeTab, setActiveTab] = useState<'backlog' | 'rules'>('backlog');
 
@@ -96,7 +97,7 @@ export const FocusController: React.FC<FocusControllerProps> = ({
 
   const handleAuxSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (taskInput.trim()) onStartAux(taskInput);
+    if (taskInput.trim()) onStartAux(taskInput, categoryInput);
   };
 
   const handleRuleSubmit = (e: React.FormEvent) => {
@@ -155,6 +156,59 @@ export const FocusController: React.FC<FocusControllerProps> = ({
                 autoFocus
                 />
             </div>
+
+            <div>
+                <label className="block text-xs font-medium text-gray-400 mb-2 uppercase tracking-wide">
+                Category
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                    <button
+                        type="button"
+                        onClick={() => setCategoryInput('research')}
+                        className={`p-3 rounded-lg text-xs font-bold transition-all ${
+                            categoryInput === 'research'
+                                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg'
+                                : 'bg-zinc-800 text-gray-400 hover:bg-zinc-700'
+                        }`}
+                    >
+                        Research
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setCategoryInput('exercise')}
+                        className={`p-3 rounded-lg text-xs font-bold transition-all ${
+                            categoryInput === 'exercise'
+                                ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg'
+                                : 'bg-zinc-800 text-gray-400 hover:bg-zinc-700'
+                        }`}
+                    >
+                        Exercise
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setCategoryInput('eating')}
+                        className={`p-3 rounded-lg text-xs font-bold transition-all ${
+                            categoryInput === 'eating'
+                                ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg'
+                                : 'bg-zinc-800 text-gray-400 hover:bg-zinc-700'
+                        }`}
+                    >
+                        Eating
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setCategoryInput('work')}
+                        className={`p-3 rounded-lg text-xs font-bold transition-all ${
+                            categoryInput === 'work'
+                                ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-white shadow-lg'
+                                : 'bg-zinc-800 text-gray-400 hover:bg-zinc-700'
+                        }`}
+                    >
+                        Work
+                    </button>
+                </div>
+            </div>
+
             <div className="flex gap-4 items-center text-sm text-gray-500">
                 <span className="flex items-center gap-1">⏱️ 15m Prep</span>
                 <span className="flex items-center gap-1">🔒 Sacred Seat</span>

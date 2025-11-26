@@ -44,6 +44,7 @@ export interface AppState {
   stage: AppStage;
   currentTask: string;
   currentSteps: string[];
+  currentCategory?: TaskCategory; // Category for current session
   auxStartTime: number | null; // Timestamp
   focusStartTime: number | null; // Timestamp
   data: SacredSeatData;

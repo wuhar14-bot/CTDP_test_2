@@ -64,6 +64,7 @@ const INITIAL_STATE: AppState = {
   stage: 'IDLE',
   currentTask: '',
   currentSteps: [],
+  currentCategory: undefined,
   auxStartTime: null,
   focusStartTime: null,
   data: INITIAL_DATA
@@ -116,12 +117,13 @@ export default function App() {
 
   // --- Core Actions ---
 
-  const startAuxChain = (task: string) => {
+  const startAuxChain = (task: string, category?: import('./types').TaskCategory) => {
     setState(prev => ({
       ...prev,
       stage: 'AUX_COUNTDOWN',
       currentTask: task,
       currentSteps: [],
+      currentCategory: category || 'research',
       auxStartTime: Date.now()
     }));
   };
@@ -179,7 +181,8 @@ export default function App() {
       startTime: new Date(state.focusStartTime).toISOString(),
       endTime: new Date(endTime).toISOString(),
       durationMinutes,
-      status: 'completed'
+      status: 'completed',
+      category: state.currentCategory || 'research'
     };
 
     setState(prev => ({
