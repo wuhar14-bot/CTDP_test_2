@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { FocusSession } from '../types';
+import { FocusSession, TaskCategory } from '../types';
 import { Button } from './Button';
 
 interface SessionDetailModalProps {
@@ -25,6 +25,7 @@ export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
     task: string;
     duration: number;
     steps: string[];
+    category: TaskCategory;
   } | null>(null);
   const [newStepInput, setNewStepInput] = useState('');
 
@@ -32,12 +33,28 @@ export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
 
   const totalMinutes = sessions.reduce((acc, s) => acc + s.durationMinutes, 0);
 
+  const getCategoryGradient = (category?: TaskCategory): string => {
+    switch (category) {
+      case 'research':
+        return 'from-indigo-600 to-purple-600';
+      case 'exercise':
+        return 'from-orange-500 to-red-500';
+      case 'eating':
+        return 'from-emerald-500 to-teal-500';
+      case 'work':
+        return 'from-amber-500 to-yellow-500';
+      default:
+        return 'from-indigo-600 to-purple-600';
+    }
+  };
+
   const startEditing = (session: FocusSession) => {
     setEditingId(session.id);
     setEditForm({
       task: session.task,
       duration: session.durationMinutes,
-      steps: session.steps ? [...session.steps] : []
+      steps: session.steps ? [...session.steps] : [],
+      category: session.category || 'research'
     });
     setNewStepInput('');
   };
@@ -52,7 +69,8 @@ export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
       onUpdateSession(editingId, {
         task: editForm.task,
         durationMinutes: editForm.duration,
-        steps: editForm.steps
+        steps: editForm.steps,
+        category: editForm.category
       });
       cancelEditing();
     }
@@ -108,12 +126,63 @@ export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
                             <div key={session.id} className="bg-zinc-800 border border-indigo-500/50 rounded-lg p-3 space-y-3">
                                 <div>
                                     <label className="text-[10px] text-gray-500 uppercase font-bold">Task Name</label>
-                                    <input 
+                                    <input
                                         value={editForm.task}
                                         onChange={e => setEditForm({...editForm, task: e.target.value})}
                                         className="w-full bg-black/50 border border-white/10 rounded px-2 py-1 text-sm text-white focus:border-indigo-500 outline-none"
                                     />
                                 </div>
+
+                                <div>
+                                    <label className="text-[10px] text-gray-500 uppercase font-bold mb-2 block">Category</label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setEditForm({...editForm, category: 'research'})}
+                                            className={`p-2 rounded-lg text-xs font-bold transition-all ${
+                                                editForm.category === 'research'
+                                                    ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg'
+                                                    : 'bg-zinc-700 text-gray-400 hover:bg-zinc-600'
+                                            }`}
+                                        >
+                                            Research
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setEditForm({...editForm, category: 'exercise'})}
+                                            className={`p-2 rounded-lg text-xs font-bold transition-all ${
+                                                editForm.category === 'exercise'
+                                                    ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg'
+                                                    : 'bg-zinc-700 text-gray-400 hover:bg-zinc-600'
+                                            }`}
+                                        >
+                                            Exercise
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setEditForm({...editForm, category: 'eating'})}
+                                            className={`p-2 rounded-lg text-xs font-bold transition-all ${
+                                                editForm.category === 'eating'
+                                                    ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg'
+                                                    : 'bg-zinc-700 text-gray-400 hover:bg-zinc-600'
+                                            }`}
+                                        >
+                                            Eating
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setEditForm({...editForm, category: 'work'})}
+                                            className={`p-2 rounded-lg text-xs font-bold transition-all ${
+                                                editForm.category === 'work'
+                                                    ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-white shadow-lg'
+                                                    : 'bg-zinc-700 text-gray-400 hover:bg-zinc-600'
+                                            }`}
+                                        >
+                                            Work
+                                        </button>
+                                    </div>
+                                </div>
+
                                 <div className="flex gap-4">
                                     <div className="flex-1">
                                         <label className="text-[10px] text-gray-500 uppercase font-bold">Duration (min)</label>
@@ -176,7 +245,7 @@ export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
                     // --- VIEW MODE ---
                     return (
                         <div key={session.id} className="bg-white/5 rounded-lg p-3 border border-white/5 group relative">
-                            <button 
+                            <button
                                 onClick={() => startEditing(session)}
                                 className="absolute top-2 right-2 text-gray-500 hover:text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity p-1"
                                 title="Edit Session"
@@ -186,9 +255,14 @@ export const SessionDetailModal: React.FC<SessionDetailModalProps> = ({
 
                             <div className="flex justify-between items-start mb-1 pr-6">
                                 <span className="font-medium text-gray-200 text-sm">{session.task}</span>
-                                <span className={`text-[10px] px-1.5 py-0.5 rounded ${session.status === 'planned' ? 'bg-gray-700 text-gray-400' : 'bg-emerald-900 text-emerald-400'}`}>
-                                    {session.status === 'planned' ? 'Planned' : 'Done'}
-                                </span>
+                                <div className="flex gap-1.5">
+                                    <span className={`text-[10px] px-1.5 py-0.5 rounded bg-gradient-to-r ${getCategoryGradient(session.category)} text-white font-bold`}>
+                                        {session.category ? session.category.charAt(0).toUpperCase() + session.category.slice(1) : 'Research'}
+                                    </span>
+                                    <span className={`text-[10px] px-1.5 py-0.5 rounded ${session.status === 'planned' ? 'bg-gray-700 text-gray-400' : 'bg-emerald-900 text-emerald-400'}`}>
+                                        {session.status === 'planned' ? 'Planned' : 'Done'}
+                                    </span>
+                                </div>
                             </div>
                             <div className="flex justify-between text-xs text-gray-500 font-mono mb-2">
                                 <span>{new Date(session.startTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
