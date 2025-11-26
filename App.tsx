@@ -25,7 +25,8 @@ const DEMO_SESSIONS: FocusSession[] = [
     endTime: new Date(Date.now() - 1000 * 60 * 60 * 23.5 * 2).toISOString(),
     durationMinutes: 45,
     status: 'completed',
-    steps: ['Read documentation', 'Summarized key points']
+    steps: ['Read documentation', 'Summarized key points'],
+    category: 'research'
   },
   {
     id: DEMO_ID_2,
@@ -33,7 +34,8 @@ const DEMO_SESSIONS: FocusSession[] = [
     startTime: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), // 1 day ago
     endTime: new Date(Date.now() - 1000 * 60 * 60 * 22).toISOString(),
     durationMinutes: 90,
-    status: 'completed'
+    status: 'completed',
+    category: 'work'
   },
   {
     id: DEMO_ID_3,
@@ -41,7 +43,8 @@ const DEMO_SESSIONS: FocusSession[] = [
     startTime: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString(), // 4 hours ago
     endTime: new Date(Date.now() - 1000 * 60 * 60 * 3.5).toISOString(),
     durationMinutes: 30,
-    status: 'completed'
+    status: 'completed',
+    category: 'work'
   },
   {
     id: DEMO_ID_4,
@@ -49,7 +52,8 @@ const DEMO_SESSIONS: FocusSession[] = [
     startTime: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), // 2 hours ago
     endTime: new Date(Date.now() - 1000 * 60 * 60 * 1).toISOString(),
     durationMinutes: 60,
-    status: 'completed'
+    status: 'completed',
+    category: 'work'
   }
 ];
 

@@ -244,7 +244,7 @@ export const TimeHorizon: React.FC<TimeHorizonProps> = ({ sessions, onDeleteSess
                                         `}
                                     >
                                         <div className="w-full px-2 flex items-center justify-between group-hover/item:items-start group-hover/item:flex-col group-hover/item:gap-1 group-hover/item:p-3">
-                                            <div className={`text-[11px] font-bold w-full group-hover/item:whitespace-normal group-hover/item:text-sm group-hover/item:leading-tight ${session.durationMinutes > 60 ? 'opacity-100' : 'opacity-0'} group-hover/item:opacity-100`}>
+                                            <div className={`text-[11px] font-bold w-full truncate group-hover/item:whitespace-normal group-hover/item:text-sm group-hover/item:leading-tight ${session.durationMinutes > 60 ? 'opacity-100' : 'opacity-0'} group-hover/item:opacity-100`}>
                                                 {session.task}
                                             </div>
                                             
