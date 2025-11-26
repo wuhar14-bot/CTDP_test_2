@@ -1,6 +1,6 @@
 
 import React, { useMemo, useState } from 'react';
-import { FocusSession } from '../types';
+import { FocusSession, TaskCategory } from '../types';
 
 interface TimeHorizonProps {
   sessions: FocusSession[];
@@ -16,6 +16,22 @@ const END_HOUR = START_HOUR + TOTAL_HOURS; // Until Midnight
 
 export const TimeHorizon: React.FC<TimeHorizonProps> = ({ sessions, onDeleteSession, onBookSlot, onSessionClick }) => {
   const [weekOffset, setWeekOffset] = useState(0);
+
+  // Get gradient color based on category
+  const getCategoryGradient = (category?: TaskCategory): string => {
+    switch (category) {
+      case 'research':
+        return 'from-indigo-600 to-purple-600'; // Blue-purple (default)
+      case 'exercise':
+        return 'from-orange-500 to-red-500'; // Orange-red
+      case 'eating':
+        return 'from-emerald-500 to-teal-500'; // Green
+      case 'work':
+        return 'from-amber-500 to-yellow-500'; // Yellow
+      default:
+        return 'from-indigo-600 to-purple-600'; // Default to research
+    }
+  };
 
   // Generate Rolling Window based on offset
   // Default: Center on Today [-3, +3]
@@ -205,6 +221,9 @@ export const TimeHorizon: React.FC<TimeHorizonProps> = ({ sessions, onDeleteSess
                                 const calculatedWidth = Math.max(288, Math.min(600, charLength * 8 + 80));
                                 const hoverWidth = `${calculatedWidth}px`;
 
+                                // Get category-specific gradient
+                                const categoryGradient = getCategoryGradient(session.category);
+
                                 return (
                                     <div
                                         key={session.id}
@@ -216,16 +235,16 @@ export const TimeHorizon: React.FC<TimeHorizonProps> = ({ sessions, onDeleteSess
                                             e.stopPropagation();
                                             onSessionClick(session);
                                         }}
-                                        className={`absolute top-1 bottom-1 rounded-md shadow-sm flex flex-col justify-center group/item transition-all duration-300 ease-out cursor-pointer overflow-hidden hover:!-translate-x-[35%] hover:!h-auto hover:min-h-[90%] hover:shadow-[0_10px_30px_rgba(0,0,0,0.5)] hover:rounded-xl
+                                        className={`absolute top-1 bottom-1 rounded-md shadow-sm flex flex-col justify-center group/item transition-all duration-300 ease-out cursor-pointer overflow-visible hover:!-translate-x-[35%] hover:!h-auto hover:min-h-[90%] hover:shadow-[0_10px_30px_rgba(0,0,0,0.5)] hover:rounded-xl
                                         [&:hover]:!w-[var(--hover-width)]
                                             ${isPlanned
                                                 ? 'border-2 border-dashed border-gray-600 bg-zinc-900/90 text-gray-400 hover:border-gray-400 hover:z-50'
-                                                : 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white z-10 hover:z-50 hover:brightness-110'
+                                                : `bg-gradient-to-r ${categoryGradient} text-white z-10 hover:z-50 hover:brightness-110`
                                             }
                                         `}
                                     >
                                         <div className="w-full px-2 flex items-center justify-between group-hover/item:items-start group-hover/item:flex-col group-hover/item:gap-1 group-hover/item:p-3">
-                                            <div className="text-xs font-bold truncate w-full group-hover/item:whitespace-normal group-hover/item:text-sm group-hover/item:leading-tight">
+                                            <div className="text-[11px] font-bold overflow-visible whitespace-nowrap w-full group-hover/item:whitespace-normal group-hover/item:text-sm group-hover/item:leading-tight">
                                                 {session.task}
                                             </div>
                                             

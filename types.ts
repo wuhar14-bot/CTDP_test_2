@@ -1,6 +1,8 @@
 
 export type AppStage = 'IDLE' | 'AUX_COUNTDOWN' | 'FOCUS';
 
+export type TaskCategory = 'research' | 'exercise' | 'eating' | 'work';
+
 export interface FocusSession {
   id: string;
   task: string;
@@ -9,6 +11,7 @@ export interface FocusSession {
   durationMinutes: number;
   status?: 'completed' | 'planned';
   steps?: string[];
+  category?: TaskCategory; // Task category for color coding
 }
 
 export interface NodeLayout {

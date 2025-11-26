@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from './Button';
+import { TaskCategory } from '../types';
 
 interface BookingModalProps {
   isOpen: boolean;
   initialDate: Date | null;
   initialHour: number;
   onClose: () => void;
-  onConfirm: (task: string, startTime: string, duration: number) => void;
+  onConfirm: (task: string, startTime: string, duration: number, category?: TaskCategory) => void;
 }
 
 export const BookingModal: React.FC<BookingModalProps> = ({
@@ -19,6 +20,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const [task, setTask] = useState('');
   const [timeStr, setTimeStr] = useState('09:00');
   const [duration, setDuration] = useState(60);
+  const [category, setCategory] = useState<TaskCategory>('research');
 
   useEffect(() => {
     if (isOpen && initialDate) {
@@ -26,6 +28,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       const h = initialHour.toString().padStart(2, '0');
       setTimeStr(`${h}:00`);
       setTask('');
+      setCategory('research'); // Reset to default
     }
   }, [isOpen, initialDate, initialHour]);
 
@@ -40,7 +43,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     const start = new Date(initialDate);
     start.setHours(h, m, 0, 0);
 
-    onConfirm(task, start.toISOString(), duration);
+    onConfirm(task, start.toISOString(), duration, category);
     onClose();
   };
 
@@ -55,14 +58,64 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Task / Event</label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               value={task}
               onChange={(e) => setTask(e.target.value)}
               placeholder="e.g. Weekly Review"
               className="w-full bg-black border border-white/10 rounded-lg p-3 text-white focus:border-indigo-500 outline-none"
               autoFocus
             />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Category</label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setCategory('research')}
+                className={`p-2.5 rounded-lg text-xs font-bold transition-all ${
+                  category === 'research'
+                    ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg'
+                    : 'bg-zinc-800 text-gray-400 hover:bg-zinc-700'
+                }`}
+              >
+                Research
+              </button>
+              <button
+                type="button"
+                onClick={() => setCategory('exercise')}
+                className={`p-2.5 rounded-lg text-xs font-bold transition-all ${
+                  category === 'exercise'
+                    ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg'
+                    : 'bg-zinc-800 text-gray-400 hover:bg-zinc-700'
+                }`}
+              >
+                Exercise
+              </button>
+              <button
+                type="button"
+                onClick={() => setCategory('eating')}
+                className={`p-2.5 rounded-lg text-xs font-bold transition-all ${
+                  category === 'eating'
+                    ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg'
+                    : 'bg-zinc-800 text-gray-400 hover:bg-zinc-700'
+                }`}
+              >
+                Eating
+              </button>
+              <button
+                type="button"
+                onClick={() => setCategory('work')}
+                className={`p-2.5 rounded-lg text-xs font-bold transition-all ${
+                  category === 'work'
+                    ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-white shadow-lg'
+                    : 'bg-zinc-800 text-gray-400 hover:bg-zinc-700'
+                }`}
+              >
+                Work
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

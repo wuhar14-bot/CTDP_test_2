@@ -221,14 +221,15 @@ export default function App() {
     setIsBookingOpen(true);
   };
 
-  const confirmBooking = (task: string, startTimeIso: string, duration: number) => {
+  const confirmBooking = (task: string, startTimeIso: string, duration: number, category?: import('./types').TaskCategory) => {
     const newSession: FocusSession = {
       id: generateId(),
       task,
       startTime: startTimeIso,
       endTime: new Date(new Date(startTimeIso).getTime() + duration * 60000).toISOString(),
       durationMinutes: duration,
-      status: 'planned'
+      status: 'planned',
+      category: category || 'research' // Default to research if not provided
     };
     updateData(d => ({ ...d, history: [...d.history, newSession] }));
   };
