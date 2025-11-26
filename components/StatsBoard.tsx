@@ -183,7 +183,6 @@ export const StatsBoard: React.FC<StatsBoardProps> = ({ sessions, onSlotClick })
     // Github style: Columns = Weeks, Rows = Days
     // We render 52 columns
     // This is horizontally scrollable
-    const today = new Date();
     
     const weeks = [];
     let current = new Date(currentDateReference);
