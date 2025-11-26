@@ -335,27 +335,32 @@ export const FocusController: React.FC<FocusControllerProps> = ({
              </div>
              
              {/* List of Steps */}
-             <div className="p-3 overflow-y-auto flex-1 space-y-2 hide-scrollbar flex flex-col-reverse">
+             <div className="p-3 overflow-y-auto flex-1 space-y-2 hide-scrollbar">
                 {currentSteps.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center text-gray-600 text-xs italic opacity-50">
                         <span>No actions recorded.</span>
                         <span className="mt-1">Log your progress below.</span>
                     </div>
                 ) : (
-                    currentSteps.map((step, idx) => (
-                        <div key={idx} className="bg-zinc-800/40 border border-white/5 rounded p-3 text-sm text-gray-300 flex justify-between items-start group animate-in slide-in-from-bottom-1 fade-in duration-300 hover:bg-zinc-800/60 transition-colors">
-                            <div className="flex gap-3">
-                                <span className="text-gray-600 text-xs font-mono mt-0.5 min-w-[1.5rem]">{(idx + 1).toString().padStart(2, '0')}</span>
-                                <span className="break-words leading-relaxed text-xs">{step}</span>
+                    // Reverse the steps for display so newest is at top
+                    [...currentSteps].reverse().map((step, idx) => {
+                        // Calculate original index to preserve correct delete functionality
+                        const originalIndex = currentSteps.length - 1 - idx;
+                        return (
+                            <div key={originalIndex} className="bg-zinc-800/40 border border-white/5 rounded p-3 text-sm text-gray-300 flex justify-between items-start group animate-in slide-in-from-top-1 fade-in duration-300 hover:bg-zinc-800/60 transition-colors">
+                                <div className="flex gap-3">
+                                    <span className="text-gray-600 text-xs font-mono mt-0.5 min-w-[1.5rem]">{(originalIndex + 1).toString().padStart(2, '0')}</span>
+                                    <span className="break-words leading-relaxed text-xs">{step}</span>
+                                </div>
+                                <button 
+                                    onClick={() => onDeleteStep(originalIndex)}
+                                    className="text-gray-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity px-1 -mr-1"
+                                >
+                                    ×
+                                </button>
                             </div>
-                            <button 
-                                onClick={() => onDeleteStep(idx)}
-                                className="text-gray-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity px-1 -mr-1"
-                            >
-                                ×
-                            </button>
-                        </div>
-                    ))
+                        );
+                    })
                 )}
             </div>
 

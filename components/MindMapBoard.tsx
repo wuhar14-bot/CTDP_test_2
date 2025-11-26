@@ -352,8 +352,8 @@ export const MindMapBoard: React.FC<MindMapBoardProps> = ({
                     <div
                         id={`node-${id}`}
                         key={id}
-                        className={`absolute flex flex-col pointer-events-auto transition-all group/node
-                            ${isDragging ? 'z-50 cursor-grabbing' : 'z-10 hover:z-40 cursor-grab'}
+                        className={`absolute flex flex-col pointer-events-auto transition-all duration-300 ease-out group/node
+                            ${isDragging ? 'z-50 cursor-grabbing' : 'z-10 hover:z-[60] cursor-grab'}
                         `}
                         style={{ 
                             left: pos.x, 
@@ -365,10 +365,11 @@ export const MindMapBoard: React.FC<MindMapBoardProps> = ({
                         onMouseUp={() => handleMouseUpNode(id)}
                     >
                         <div className={`
-                             w-full h-full bg-[#1a1a1a] border rounded-lg p-3 shadow-xl flex flex-col justify-between relative z-10
-                             ${isDragging ? 'border-indigo-500 shadow-indigo-500/20 scale-105' : 'border-white/10 hover:border-white/30'}
+                             w-full h-full bg-[#1a1a1a] border rounded-lg p-3 shadow-xl flex flex-col justify-between relative z-10 overflow-hidden
+                             transition-all duration-300
+                             ${isDragging ? 'border-indigo-500 shadow-indigo-500/20 scale-105' : 'border-white/10 group-hover/node:border-indigo-500/50 group-hover/node:w-[400px] group-hover/node:h-auto group-hover/node:bg-zinc-900 group-hover/node:shadow-2xl'}
                         `}>
-                            <div className="flex justify-between items-start pointer-events-auto">
+                            <div className="flex justify-between items-start pointer-events-auto shrink-0">
                                 <span className="text-[9px] font-mono text-gray-500 uppercase tracking-widest">
                                     {new Date(session.startTime).toLocaleDateString(undefined, {month:'short', day:'numeric'})}
                                 </span>
@@ -380,10 +381,29 @@ export const MindMapBoard: React.FC<MindMapBoardProps> = ({
                                     ×
                                 </button>
                             </div>
-                            <div className="text-xs font-medium text-gray-200 line-clamp-2 leading-snug">
-                                {session.task}
+                            
+                            {/* Content Expansion on Hover */}
+                            <div className="flex flex-col gap-2 mt-1">
+                                <div className={`text-xs font-medium text-gray-200 leading-snug group-hover/node:whitespace-normal group-hover/node:text-sm ${isDragging ? 'line-clamp-2' : 'line-clamp-2 group-hover/node:line-clamp-none'}`}>
+                                    {session.task}
+                                </div>
+                                
+                                {/* Full Details shown only on hover */}
+                                <div className="hidden group-hover/node:block text-[10px] text-gray-400 mt-2 pt-2 border-t border-white/5 animate-in fade-in slide-in-from-top-2 duration-200">
+                                     {session.steps && session.steps.length > 0 ? (
+                                         <ul className="space-y-1 list-disc list-inside">
+                                             {session.steps.slice(0, 5).map((step, idx) => (
+                                                 <li key={idx} className="truncate">{step}</li>
+                                             ))}
+                                             {session.steps.length > 5 && <li className="italic text-gray-600">+{session.steps.length - 5} more...</li>}
+                                         </ul>
+                                     ) : (
+                                         <span className="italic text-gray-600">No logs recorded.</span>
+                                     )}
+                                </div>
                             </div>
-                            <div className="flex justify-between items-end mt-1">
+
+                            <div className="flex justify-between items-end mt-2 shrink-0">
                                 <div className={`text-[9px] px-1.5 py-0.5 rounded-sm bg-indigo-500/10 text-indigo-400 border border-indigo-500/20`}>
                                     {session.durationMinutes}m
                                 </div>
