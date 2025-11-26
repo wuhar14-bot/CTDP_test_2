@@ -207,9 +207,9 @@ export const TimeHorizon: React.FC<TimeHorizonProps> = ({ sessions, onDeleteSess
                                             e.stopPropagation();
                                             onSessionClick(session);
                                         }}
-                                        className={`absolute top-1 bottom-1 rounded-md shadow-sm flex flex-col justify-center group/item transition-all duration-300 ease-out cursor-pointer overflow-hidden hover:!w-72 hover:!h-auto hover:min-h-[90%] hover:shadow-[0_10px_30px_rgba(0,0,0,0.5)] hover:rounded-xl
-                                            ${isPlanned 
-                                                ? 'border-2 border-dashed border-gray-600 bg-zinc-900/90 text-gray-400 hover:border-gray-400 hover:z-50' 
+                                        className={`absolute top-1 bottom-1 rounded-md shadow-sm flex flex-col justify-center group/item transition-all duration-300 ease-out cursor-pointer overflow-hidden hover:!w-72 hover:!-translate-x-[35%] hover:!h-auto hover:min-h-[90%] hover:shadow-[0_10px_30px_rgba(0,0,0,0.5)] hover:rounded-xl
+                                            ${isPlanned
+                                                ? 'border-2 border-dashed border-gray-600 bg-zinc-900/90 text-gray-400 hover:border-gray-400 hover:z-50'
                                                 : 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white z-10 hover:z-50 hover:brightness-110'
                                             }
                                         `}
@@ -221,20 +221,10 @@ export const TimeHorizon: React.FC<TimeHorizonProps> = ({ sessions, onDeleteSess
                                             
                                             {/* Details on Hover */}
                                             <div className="hidden group-hover/item:block w-full border-t border-white/20 pt-2 mt-1 animate-in fade-in slide-in-from-top-1 duration-200">
-                                                <div className="flex justify-between text-[10px] opacity-80 mb-2 font-mono">
+                                                <div className="flex justify-between text-[10px] opacity-80 font-mono">
                                                     <span>{session.durationMinutes} min</span>
                                                     <span>{new Date(session.startTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
                                                 </div>
-                                                
-                                                {session.steps && session.steps.length > 0 && (
-                                                    <div className="space-y-1">
-                                                        <p className="text-[9px] uppercase tracking-wider opacity-50 font-bold">Log</p>
-                                                        <ul className="text-[10px] space-y-0.5 opacity-90 list-disc list-inside">
-                                                            {session.steps.slice(0,3).map((s,i) => <li key={i} className="truncate">{s}</li>)}
-                                                            {session.steps.length > 3 && <li className="italic opacity-50">+{session.steps.length - 3} more</li>}
-                                                        </ul>
-                                                    </div>
-                                                )}
                                             </div>
                                         </div>
 
