@@ -293,7 +293,7 @@ export const FocusController: React.FC<FocusControllerProps> = ({
 
   // --- STAGE 3: ACTIVE FOCUS (SACRED SEAT) ---
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-140px)] min-h-[600px]">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-80px)] min-h-[600px]">
       
       {/* 1. TIMER COLUMN (CENTER FOCUS) */}
       <div className="bg-zinc-900/50 border border-white/5 rounded-2xl flex flex-col overflow-hidden relative shadow-xl">
@@ -342,18 +342,16 @@ export const FocusController: React.FC<FocusControllerProps> = ({
                         <span className="mt-1">Log your progress below.</span>
                     </div>
                 ) : (
-                    // Reverse the steps for display so newest is at top
-                    [...currentSteps].reverse().map((step, idx) => {
-                        // Calculate original index to preserve correct delete functionality
-                        const originalIndex = currentSteps.length - 1 - idx;
+                    // Display steps in chronological order (oldest to newest)
+                    currentSteps.map((step, idx) => {
                         return (
-                            <div key={originalIndex} className="bg-zinc-800/40 border border-white/5 rounded p-3 text-sm text-gray-300 flex justify-between items-start group animate-in slide-in-from-top-1 fade-in duration-300 hover:bg-zinc-800/60 transition-colors">
+                            <div key={idx} className="bg-zinc-800/40 border border-white/5 rounded p-3 text-sm text-gray-300 flex justify-between items-start group animate-in slide-in-from-top-1 fade-in duration-300 hover:bg-zinc-800/60 transition-colors">
                                 <div className="flex gap-3">
-                                    <span className="text-gray-600 text-xs font-mono mt-0.5 min-w-[1.5rem]">{(originalIndex + 1).toString().padStart(2, '0')}</span>
+                                    <span className="text-gray-600 text-xs font-mono mt-0.5 min-w-[1.5rem]">{(idx + 1).toString().padStart(2, '0')}</span>
                                     <span className="break-words leading-relaxed text-xs">{step}</span>
                                 </div>
-                                <button 
-                                    onClick={() => onDeleteStep(originalIndex)}
+                                <button
+                                    onClick={() => onDeleteStep(idx)}
                                     className="text-gray-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity px-1 -mr-1"
                                 >
                                     ×
