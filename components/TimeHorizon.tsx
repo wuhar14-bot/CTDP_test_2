@@ -177,7 +177,7 @@ export const TimeHorizon: React.FC<TimeHorizonProps> = ({ sessions, onDeleteSess
                 const isToday = getRelativeLabel(date) === 'Today';
 
                 return (
-                    <div key={rowIndex} className="flex items-center group/row h-10">
+                    <div key={rowIndex} className="flex items-center group/row h-16">
                         {/* Row Label */}
                         <div className="w-24 flex-shrink-0 text-right pr-4">
                             <div className={`text-xs font-bold transition-colors ${isToday ? 'text-indigo-400' : 'text-gray-500'}`}>
@@ -202,18 +202,19 @@ export const TimeHorizon: React.FC<TimeHorizonProps> = ({ sessions, onDeleteSess
                                     <div
                                         key={session.id}
                                         style={style}
+                                        title={`${session.task} (${session.durationMinutes}m)`}
                                         onClick={(e) => {
                                             // Optional: click to edit? For now stop propagation
                                             e.stopPropagation();
                                         }}
-                                        className={`absolute top-1 bottom-1 rounded-sm shadow-sm flex items-center justify-center group/item transition-all
+                                        className={`absolute top-1 bottom-1 rounded-md shadow-sm flex items-center justify-center group/item transition-all
                                             ${isPlanned 
                                                 ? 'border-2 border-dashed border-gray-600 bg-transparent text-gray-400' 
                                                 : 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:brightness-110 z-10'
                                             }
                                         `}
                                     >
-                                        <div className="text-[9px] font-bold truncate px-1 opacity-80 select-none pointer-events-none">
+                                        <div className="text-xs font-bold truncate px-2 opacity-100 select-none pointer-events-none">
                                             {session.task}
                                         </div>
 
@@ -223,7 +224,7 @@ export const TimeHorizon: React.FC<TimeHorizonProps> = ({ sessions, onDeleteSess
                                                 e.stopPropagation();
                                                 if(confirm(`Delete "${session.task}"?`)) onDeleteSession(session.id);
                                             }}
-                                            className="absolute -top-1 -right-1 w-4 h-4 flex items-center justify-center opacity-0 group-hover/item:opacity-100 bg-red-500 rounded-full text-white text-[8px] cursor-pointer hover:bg-red-600 shadow-md z-50"
+                                            className="absolute -top-2 -right-2 w-5 h-5 flex items-center justify-center opacity-0 group-hover/item:opacity-100 bg-red-500 rounded-full text-white text-[10px] cursor-pointer hover:bg-red-600 shadow-md z-50"
                                         >
                                             ×
                                         </div>

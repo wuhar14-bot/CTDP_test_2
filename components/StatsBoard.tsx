@@ -17,10 +17,14 @@ export const StatsBoard: React.FC<StatsBoardProps> = ({ sessions, onSlotClick })
   
   const getIntensityColor = (minutes: number) => {
     if (minutes === 0) return 'bg-zinc-800/50 hover:bg-zinc-800';
-    if (minutes < 30) return 'bg-emerald-900/60 border-emerald-900/50';
-    if (minutes < 60) return 'bg-emerald-700/60 border-emerald-700/50';
-    if (minutes < 120) return 'bg-emerald-500/80 border-emerald-500/50 shadow-[0_0_10px_rgba(16,185,129,0.2)]';
-    return 'bg-emerald-400 border-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.4)]';
+    if (minutes < 15) return 'bg-emerald-950/40 border-emerald-900/30';
+    if (minutes < 30) return 'bg-emerald-900/50 border-emerald-800/40';
+    if (minutes < 60) return 'bg-emerald-800/60 border-emerald-700/50';
+    if (minutes < 90) return 'bg-emerald-700/70 border-emerald-600/50';
+    if (minutes < 120) return 'bg-emerald-600/80 border-emerald-500/60';
+    if (minutes < 180) return 'bg-emerald-500/90 border-emerald-400/70 shadow-[0_0_5px_rgba(16,185,129,0.1)]';
+    if (minutes < 240) return 'bg-emerald-400 border-emerald-300/80 shadow-[0_0_10px_rgba(52,211,153,0.3)]';
+    return 'bg-emerald-300 border-emerald-200 shadow-[0_0_15px_rgba(110,231,183,0.5)]';
   };
 
   const completedSessions = useMemo(() => sessions.filter(s => s.status !== 'planned'), [sessions]);
@@ -82,7 +86,7 @@ export const StatsBoard: React.FC<StatsBoardProps> = ({ sessions, onSlotClick })
     ];
 
     return (
-        <div className="grid grid-cols-[min-content_repeat(7,1fr)] gap-x-3 gap-y-3 items-center">
+        <div className="grid grid-cols-[min-content_repeat(7,1fr)] gap-x-2 gap-y-2 items-center">
             {/* Header Row: Empty Corner + Days */}
             <div className="w-16"></div> {/* Spacer for Y-axis labels */}
             {days.map((d, i) => (
@@ -116,7 +120,7 @@ export const StatsBoard: React.FC<StatsBoardProps> = ({ sessions, onSlotClick })
                                 key={`${dayIdx}-${slot.label}`}
                                 onClick={() => onSlotClick(`${day.toLocaleDateString(undefined, {weekday:'long'})} ${slot.label}`, slotSessions)}
                                 className={`
-                                    aspect-square rounded-sm border border-white/5 transition-all cursor-pointer relative group
+                                    aspect-square rounded-md border border-white/5 transition-all cursor-pointer relative group
                                     ${getIntensityColor(totalMins)}
                                 `}
                             >
@@ -148,7 +152,7 @@ export const StatsBoard: React.FC<StatsBoardProps> = ({ sessions, onSlotClick })
     for(let i=1; i<=daysInMonth; i++) grid.push(new Date(year, month, i));
 
     return (
-        <div className="grid grid-cols-7 gap-1.5">
+        <div className="grid grid-cols-7 gap-2">
             {['M','T','W','T','F','S','S'].map((d,i) => (
                 <div key={i} className="text-center text-[10px] text-gray-600 font-bold">{d}</div>
             ))}
@@ -180,10 +184,6 @@ export const StatsBoard: React.FC<StatsBoardProps> = ({ sessions, onSlotClick })
     // We render 52 columns
     // This is horizontally scrollable
     const today = new Date();
-    const oneYearAgo = new Date();
-    oneYearAgo.setFullYear(today.getFullYear() - 1);
-    
-    // Normalize to last Sunday to end grid cleanly? Or standard GitHub starts 1 year ago.
     
     const weeks = [];
     let current = new Date(currentDateReference);
@@ -211,7 +211,7 @@ export const StatsBoard: React.FC<StatsBoardProps> = ({ sessions, onSlotClick })
                 {weeks.map((week, wIdx) => (
                     <div key={wIdx} className="flex flex-col gap-1">
                         {week.map((date, dIdx) => {
-                             if (!date) return <div key={dIdx} className="w-3 h-3 bg-transparent"></div>;
+                             if (!date) return <div key={dIdx} className="w-2 h-2 bg-transparent"></div>;
                              
                              const daySessions = completedSessions.filter(s => new Date(s.startTime).toDateString() === date.toDateString());
                              const totalMins = daySessions.reduce((acc, s) => acc + s.durationMinutes, 0);
@@ -221,7 +221,7 @@ export const StatsBoard: React.FC<StatsBoardProps> = ({ sessions, onSlotClick })
                                     key={dIdx} 
                                     title={`${date.toLocaleDateString()}: ${totalMins}m`}
                                     onClick={() => onSlotClick(date.toLocaleDateString(), daySessions)}
-                                    className={`w-3 h-3 rounded-[1px] cursor-pointer ${getIntensityColor(totalMins)}`}
+                                    className={`w-2 h-2 rounded-[1px] cursor-pointer ${getIntensityColor(totalMins)}`}
                                 />
                              );
                         })}
@@ -262,13 +262,18 @@ export const StatsBoard: React.FC<StatsBoardProps> = ({ sessions, onSlotClick })
       </div>
 
       {/* Legend */}
-      <div className="flex items-center justify-end gap-2 mt-4 text-[9px] text-gray-500 font-mono">
+      <div className="flex items-center justify-end gap-1.5 mt-4 text-[9px] text-gray-500 font-mono">
         <span>Less</span>
+        {/* Render 8-level legend */}
         <div className="w-2 h-2 bg-zinc-800 rounded-[1px]"></div>
-        <div className="w-2 h-2 bg-emerald-900/60 rounded-[1px]"></div>
-        <div className="w-2 h-2 bg-emerald-700/60 rounded-[1px]"></div>
-        <div className="w-2 h-2 bg-emerald-500/80 rounded-[1px]"></div>
-        <div className="w-2 h-2 bg-emerald-400 rounded-[1px]"></div>
+        <div className="w-2 h-2 bg-emerald-950/40 border border-emerald-900/30 rounded-[1px]"></div>
+        <div className="w-2 h-2 bg-emerald-900/50 border border-emerald-800/40 rounded-[1px]"></div>
+        <div className="w-2 h-2 bg-emerald-800/60 border border-emerald-700/50 rounded-[1px]"></div>
+        <div className="w-2 h-2 bg-emerald-700/70 border border-emerald-600/50 rounded-[1px]"></div>
+        <div className="w-2 h-2 bg-emerald-600/80 border border-emerald-500/60 rounded-[1px]"></div>
+        <div className="w-2 h-2 bg-emerald-500/90 border border-emerald-400/70 rounded-[1px]"></div>
+        <div className="w-2 h-2 bg-emerald-400 border border-emerald-300/80 rounded-[1px]"></div>
+        <div className="w-2 h-2 bg-emerald-300 border border-emerald-200 rounded-[1px]"></div>
         <span>More</span>
       </div>
     </div>
