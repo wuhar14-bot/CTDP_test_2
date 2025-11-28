@@ -358,7 +358,7 @@ export const FocusController: React.FC<FocusControllerProps> = ({
 
   // --- STAGE 3: ACTIVE FOCUS (SACRED SEAT) ---
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-[calc(100vh-40px)] min-h-[600px]">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-[66vh] min-h-[400px]">
 
       {/* 1. TIMER COLUMN (CENTER FOCUS) */}
       <div className="bg-zinc-900/50 border border-white/5 rounded-2xl flex flex-col overflow-hidden relative shadow-xl">
