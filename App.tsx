@@ -339,7 +339,7 @@ export default function App() {
         
         {state.stage === 'FOCUS' ? (
           // MODE A: ZEN FOCUS MODE (Full Screen)
-          <div className="animate-in fade-in zoom-in-95 duration-500 py-8">
+          <div className="animate-in fade-in zoom-in-95 duration-500 py-2">
              <FocusController
                 stage={state.stage}
                 currentTask={state.currentTask}
