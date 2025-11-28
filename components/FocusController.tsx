@@ -136,7 +136,7 @@ export const FocusController: React.FC<FocusControllerProps> = ({
             <h2 className="text-xl font-bold text-white flex items-center gap-2">
                 <span className="text-2xl">⚡</span> Start Focus Chain
             </h2>
-            
+
             <div className="px-3 py-1 bg-zinc-800 rounded-full border border-white/10 text-xs font-mono text-gray-400">
                 Chain: <span className="text-white font-bold">{chainCount}</span>
             </div>
@@ -233,20 +233,20 @@ export const FocusController: React.FC<FocusControllerProps> = ({
         {/* --- BACKLOG / RULES TABS --- */}
         <div className="border-t border-white/5 bg-black/20 mt-2 flex-1 flex flex-col min-h-[300px]">
             <div className="flex border-b border-white/5">
-                <button 
+                <button
                   onClick={() => setActiveTab('backlog')}
                   className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-colors ${activeTab === 'backlog' ? 'bg-white/5 text-white' : 'text-gray-500 hover:text-gray-300'}`}
                 >
                     Backlog
                 </button>
-                <button 
+                <button
                   onClick={() => setActiveTab('rules')}
                   className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-colors ${activeTab === 'rules' ? 'bg-white/5 text-white' : 'text-gray-500 hover:text-gray-300'}`}
                 >
                     Rules
                 </button>
             </div>
-            
+
             <div className="p-4 flex-1 overflow-y-auto max-h-[300px]">
                 {activeTab === 'backlog' ? (
                     <div className="space-y-4">
@@ -358,12 +358,12 @@ export const FocusController: React.FC<FocusControllerProps> = ({
 
   // --- STAGE 3: ACTIVE FOCUS (SACRED SEAT) ---
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-40px)] min-h-[600px]">
-      
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-[calc(100vh-40px)] min-h-[600px]">
+
       {/* 1. TIMER COLUMN (CENTER FOCUS) */}
       <div className="bg-zinc-900/50 border border-white/5 rounded-2xl flex flex-col overflow-hidden relative shadow-xl">
         {/* Header */}
-        <div className="h-12 border-b border-white/5 bg-black/20 flex items-center px-4 justify-between shrink-0">
+        <div className="h-10 border-b border-white/5 bg-black/20 flex items-center px-3 justify-between shrink-0">
              <span className="text-xs font-bold uppercase tracking-wider text-indigo-400 flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
                 Active Session
@@ -372,9 +372,9 @@ export const FocusController: React.FC<FocusControllerProps> = ({
         </div>
         
         {/* Main Content */}
-        <div className="flex-1 flex flex-col items-center justify-center p-6 relative">
+        <div className="flex-1 flex flex-col items-center justify-center p-4 relative">
              <div className="absolute inset-0 bg-gradient-to-b from-indigo-500/5 to-transparent pointer-events-none"></div>
-             
+
              <div className="text-6xl xl:text-7xl font-mono font-bold text-white tabular-nums tracking-tighter drop-shadow-2xl z-10 mb-2">
                {formatTime(elapsed)}
              </div>
@@ -382,7 +382,7 @@ export const FocusController: React.FC<FocusControllerProps> = ({
         </div>
 
         {/* Footer Actions */}
-        <div className="p-3 border-t border-white/5 bg-zinc-900/80 backdrop-blur shrink-0 grid gap-2">
+        <div className="p-2.5 border-t border-white/5 bg-zinc-900/80 backdrop-blur shrink-0 grid gap-2">
             <Button onClick={onFinishFocus} className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-lg shadow-emerald-900/20">
               Complete Session
             </Button>
@@ -394,13 +394,13 @@ export const FocusController: React.FC<FocusControllerProps> = ({
 
       {/* 2. SESSION LOG COLUMN */}
       <div className="bg-zinc-900/50 border border-white/5 rounded-2xl flex flex-col overflow-hidden relative shadow-xl">
-             <div className="h-12 border-b border-white/5 bg-black/20 flex items-center px-4 justify-between shrink-0">
+             <div className="h-10 border-b border-white/5 bg-black/20 flex items-center px-3 justify-between shrink-0">
                 <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Session Log</span>
                 <span className="text-[10px] bg-white/5 text-gray-300 px-1.5 py-0.5 rounded border border-white/5">{currentSteps.length}</span>
              </div>
-             
+
              {/* List of Steps */}
-             <div className="p-3 overflow-y-auto flex-1 space-y-2 hide-scrollbar">
+             <div className="p-2.5 overflow-y-auto flex-1 space-y-2 hide-scrollbar">
                 {currentSteps.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center text-gray-600 text-xs italic opacity-50">
                         <span>No actions recorded.</span>
@@ -428,18 +428,18 @@ export const FocusController: React.FC<FocusControllerProps> = ({
             </div>
 
             {/* Footer Input */}
-            <div className="p-3 border-t border-white/5 bg-zinc-900/80 backdrop-blur shrink-0">
+            <div className="p-2.5 border-t border-white/5 bg-zinc-900/80 backdrop-blur shrink-0">
                 <form onSubmit={handleStepSubmit} className="relative group">
                     <input
                         type="text"
                         value={stepInput}
                         onChange={(e) => setStepInput(e.target.value)}
                         placeholder="Log next action..."
-                        className="w-full bg-black/50 border border-white/10 rounded-lg py-2.5 pl-3 pr-10 text-xs text-white placeholder-gray-600 focus:ring-1 focus:ring-indigo-500/50 focus:border-indigo-500/50 outline-none transition-all"
+                        className="w-full bg-black/50 border border-white/10 rounded-lg py-1.5 pl-3 pr-10 text-xs text-white placeholder-gray-600 focus:ring-1 focus:ring-indigo-500/50 focus:border-indigo-500/50 outline-none transition-all"
                         autoFocus
                     />
                     <div className="absolute inset-y-0 right-2 flex items-center">
-                        <button 
+                        <button
                             type="submit"
                             className="p-1 text-[10px] bg-white/5 hover:bg-white/10 rounded text-gray-400 transition-colors uppercase font-bold tracking-wider"
                             disabled={!stepInput.trim()}
@@ -453,12 +453,12 @@ export const FocusController: React.FC<FocusControllerProps> = ({
 
       {/* 3. ACTIVE RULES COLUMN */}
       <div className="bg-zinc-900/50 border border-white/5 rounded-2xl flex flex-col overflow-hidden relative shadow-xl">
-             <div className="h-12 border-b border-white/5 bg-black/20 flex items-center px-4 justify-between shrink-0">
+             <div className="h-10 border-b border-white/5 bg-black/20 flex items-center px-3 justify-between shrink-0">
                 <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Active Rules</span>
                 <span className="text-[10px] bg-red-500/10 text-red-400 px-1.5 py-0.5 rounded border border-red-500/20">{rules.length}</span>
              </div>
 
-             <div className="p-3 overflow-y-auto flex-1 space-y-2 hide-scrollbar">
+             <div className="p-2.5 overflow-y-auto flex-1 space-y-2 hide-scrollbar">
                 {rules.length === 0 ? (
                     <div className="text-gray-600 text-xs italic text-center py-4">No constraints set.</div>
                 ) : (
@@ -478,14 +478,14 @@ export const FocusController: React.FC<FocusControllerProps> = ({
             </div>
 
             {/* Footer Input */}
-            <div className="p-3 border-t border-white/5 bg-zinc-900/80 backdrop-blur shrink-0">
+            <div className="p-2.5 border-t border-white/5 bg-zinc-900/80 backdrop-blur shrink-0">
                  <form onSubmit={handleRuleSubmit} className="flex gap-2">
                     <input
                         type="text"
                         value={ruleInput}
                         onChange={(e) => setRuleInput(e.target.value)}
                         placeholder="Add rule..."
-                        className="flex-1 bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:border-red-500/50 outline-none"
+                        className="flex-1 bg-black/50 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:border-red-500/50 outline-none"
                     />
                     <button type="submit" className="text-gray-400 hover:text-white px-2.5 py-1 bg-white/5 rounded-lg text-xs hover:bg-white/10 transition-colors">+</button>
                 </form>
