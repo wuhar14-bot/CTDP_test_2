@@ -1,4 +1,4 @@
-import React, { useCallback, useState, memo } from 'react';
+import React, { useCallback, useState, memo, useEffect, useRef } from 'react';
 import {
   ReactFlow,
   MiniMap,
@@ -15,8 +15,10 @@ import {
   Handle,
   Position,
   NodeProps,
+  ReactFlowProvider,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import { toPng, toSvg } from 'html-to-image';
 
 // Custom CSS for better contrast on controls
 const customStyles = `
@@ -172,6 +174,23 @@ const categoryColors = {
   life: '#f472b6',   // pink-400
 };
 
+// Common emoji icons for picker
+const emojiPalette = [
+  '🧠', '💡', '⭐', '🎯', '🚀', '💪', '❤️', '🔥',
+  '📚', '📖', '🔬', '💻', '📁', '📊', '📝', '✅',
+  '🏃', '🧗', '🏋️', '🚴', '⚽', '🏀', '🎾', '🏊',
+  '😴', '🍽️', '☕', '🥗', '💊', '🧘', '🌙', '☀️',
+  '💼', '🗓️', '📞', '✉️', '🤝', '💰', '📈', '🎓',
+  '🎨', '🎵', '🎬', '📷', '✈️', '🏠', '🌳', '🐕',
+];
+
+// Node type options
+const nodeTypeOptions = [
+  { value: 'root', label: '根节点', desc: '中心节点' },
+  { value: 'category', label: '分类', desc: '一级分类' },
+  { value: 'leaf', label: '叶子', desc: '具体事项' },
+];
+
 // Available color palette for node customization
 const colorPalette = [
   { name: '蓝', value: '#60a5fa' },
@@ -291,7 +310,13 @@ const DEFAULT_EDGES: Edge[] = [
   { id: 'e-exercise-gym', source: 'exercise', target: 'exercise_gym', style: { stroke: 'rgba(255,255,255,0.15)', strokeWidth: 1.5 } },
 ];
 
-export const LifeSystemMap: React.FC<LifeSystemMapProps> = ({
+// History for undo/redo
+interface HistoryState {
+  nodes: Node[];
+  edges: Edge[];
+}
+
+const LifeSystemMapInner: React.FC<LifeSystemMapProps> = ({
   initialData,
   onSave,
   onClose
@@ -303,6 +328,132 @@ export const LifeSystemMap: React.FC<LifeSystemMapProps> = ({
   const [newNodeLabel, setNewNodeLabel] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [editLabel, setEditLabel] = useState('');
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showNodeTypePicker, setShowNodeTypePicker] = useState(false);
+
+  // Undo/Redo history
+  const [history, setHistory] = useState<HistoryState[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const isUndoRedo = useRef(false);
+
+  // Save to history
+  const saveToHistory = useCallback(() => {
+    if (isUndoRedo.current) {
+      isUndoRedo.current = false;
+      return;
+    }
+    const newState = { nodes: [...nodes], edges: [...edges] };
+    setHistory(prev => {
+      const newHistory = prev.slice(0, historyIndex + 1);
+      return [...newHistory, newState].slice(-50); // Keep last 50 states
+    });
+    setHistoryIndex(prev => Math.min(prev + 1, 49));
+  }, [nodes, edges, historyIndex]);
+
+  // Undo
+  const handleUndo = useCallback(() => {
+    if (historyIndex <= 0) return;
+    isUndoRedo.current = true;
+    const prevState = history[historyIndex - 1];
+    setNodes(prevState.nodes);
+    setEdges(prevState.edges);
+    setHistoryIndex(prev => prev - 1);
+    setSelectedNode(null);
+    setSelectedEdge(null);
+  }, [history, historyIndex, setNodes, setEdges]);
+
+  // Redo
+  const handleRedo = useCallback(() => {
+    if (historyIndex >= history.length - 1) return;
+    isUndoRedo.current = true;
+    const nextState = history[historyIndex + 1];
+    setNodes(nextState.nodes);
+    setEdges(nextState.edges);
+    setHistoryIndex(prev => prev + 1);
+    setSelectedNode(null);
+    setSelectedEdge(null);
+  }, [history, historyIndex, setNodes, setEdges]);
+
+  // Export to PNG
+  const handleExportPng = useCallback(() => {
+    const flowElement = document.querySelector('.react-flow') as HTMLElement;
+    if (!flowElement) return;
+
+    toPng(flowElement, {
+      backgroundColor: colors.bg,
+      width: 1920,
+      height: 1080,
+    }).then((dataUrl) => {
+      const link = document.createElement('a');
+      link.download = `life-system-${new Date().toISOString().split('T')[0]}.png`;
+      link.href = dataUrl;
+      link.click();
+    });
+  }, []);
+
+  // Export to SVG
+  const handleExportSvg = useCallback(() => {
+    const flowElement = document.querySelector('.react-flow') as HTMLElement;
+    if (!flowElement) return;
+
+    toSvg(flowElement, {
+      backgroundColor: colors.bg,
+    }).then((dataUrl) => {
+      const link = document.createElement('a');
+      link.download = `life-system-${new Date().toISOString().split('T')[0]}.svg`;
+      link.href = dataUrl;
+      link.click();
+    });
+  }, []);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+S to save
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        onSave({ nodes, edges });
+        alert('已保存!');
+      }
+      // Ctrl+Z to undo
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        handleUndo();
+      }
+      // Ctrl+Shift+Z or Ctrl+Y to redo
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+        e.preventDefault();
+        handleRedo();
+      }
+      // Delete key to delete selected
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (selectedNode && selectedNode.id !== 'root' && !isEditing) {
+          e.preventDefault();
+          setNodes((nds) => nds.filter((n) => n.id !== selectedNode.id));
+          setEdges((eds) => eds.filter((e) => e.source !== selectedNode.id && e.target !== selectedNode.id));
+          setSelectedNode(null);
+        } else if (selectedEdge) {
+          e.preventDefault();
+          setEdges((eds) => eds.filter((e) => e.id !== selectedEdge.id));
+          setSelectedEdge(null);
+        }
+      }
+      // Escape to close pickers
+      if (e.key === 'Escape') {
+        setShowEmojiPicker(false);
+        setShowNodeTypePicker(false);
+        setIsEditing(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [nodes, edges, selectedNode, selectedEdge, isEditing, onSave, handleUndo, handleRedo, setNodes, setEdges]);
+
+  // Save history on changes
+  useEffect(() => {
+    saveToHistory();
+  }, [nodes.length, edges.length]); // Only save on structural changes
 
   // Handle new connections
   const onConnect = useCallback(
@@ -404,6 +555,34 @@ export const LifeSystemMap: React.FC<LifeSystemMapProps> = ({
     );
   }, [selectedNode, setNodes]);
 
+  // Change node icon
+  const handleChangeIcon = useCallback((icon: string) => {
+    if (!selectedNode) return;
+
+    setNodes((nds) =>
+      nds.map((n) =>
+        n.id === selectedNode.id
+          ? { ...n, data: { ...n.data, icon } }
+          : n
+      )
+    );
+    setShowEmojiPicker(false);
+  }, [selectedNode, setNodes]);
+
+  // Change node type
+  const handleChangeNodeType = useCallback((nodeType: string) => {
+    if (!selectedNode) return;
+
+    setNodes((nds) =>
+      nds.map((n) =>
+        n.id === selectedNode.id
+          ? { ...n, data: { ...n.data, nodeType } }
+          : n
+      )
+    );
+    setShowNodeTypePicker(false);
+  }, [selectedNode, setNodes]);
+
   // Save data
   const handleSave = useCallback(() => {
     onSave({ nodes, edges });
@@ -479,6 +658,61 @@ export const LifeSystemMap: React.FC<LifeSystemMapProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Undo/Redo */}
+          <div className="flex items-center gap-1 mr-2 pr-2" style={{ borderRight: `1px solid ${colors.border}` }}>
+            <button
+              onClick={handleUndo}
+              disabled={historyIndex <= 0}
+              className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors disabled:opacity-30"
+              style={{ color: colors.textMuted }}
+              title="撤销 (Ctrl+Z)"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+              </svg>
+            </button>
+            <button
+              onClick={handleRedo}
+              disabled={historyIndex >= history.length - 1}
+              className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors disabled:opacity-30"
+              style={{ color: colors.textMuted }}
+              title="重做 (Ctrl+Y)"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 10h-10a8 8 0 00-8 8v2M21 10l-6 6m6-6l-6-6" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Export dropdown */}
+          <div className="relative group">
+            <Button variant="ghost" onClick={() => {}}>
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+              </svg>
+              导出
+            </Button>
+            <div
+              className="absolute right-0 top-full mt-1 py-1 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all"
+              style={{ background: colors.bgSecondary, border: `1px solid ${colors.border}`, minWidth: '120px' }}
+            >
+              <button
+                onClick={handleExportPng}
+                className="w-full px-3 py-2 text-left text-sm hover:bg-white/5 transition-colors"
+                style={{ color: colors.text }}
+              >
+                导出 PNG
+              </button>
+              <button
+                onClick={handleExportSvg}
+                className="w-full px-3 py-2 text-left text-sm hover:bg-white/5 transition-colors"
+                style={{ color: colors.text }}
+              >
+                导出 SVG
+              </button>
+            </div>
+          </div>
+
           <Button variant="ghost" onClick={handleReset}>
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -598,6 +832,66 @@ export const LifeSystemMap: React.FC<LifeSystemMapProps> = ({
                   </svg>
                   编辑
                 </Button>
+
+                {/* Emoji picker */}
+                <div className="relative ml-2 pl-2" style={{ borderLeft: `1px solid ${colors.border}` }}>
+                  <button
+                    onClick={() => { setShowEmojiPicker(!showEmojiPicker); setShowNodeTypePicker(false); }}
+                    className="px-2 py-1 rounded-lg text-sm transition-all hover:bg-white/5"
+                    style={{ color: colors.text, border: `1px solid ${colors.border}` }}
+                    title="更换图标"
+                  >
+                    {selectedNode.data.icon ? String(selectedNode.data.icon) : '📌'} ▼
+                  </button>
+                  {showEmojiPicker && (
+                    <div
+                      className="absolute left-0 top-full mt-1 p-2 rounded-lg shadow-xl z-50 grid grid-cols-8 gap-1"
+                      style={{ background: colors.bgSecondary, border: `1px solid ${colors.border}`, width: '280px' }}
+                    >
+                      {emojiPalette.map((emoji) => (
+                        <button
+                          key={emoji}
+                          onClick={() => handleChangeIcon(emoji)}
+                          className="w-8 h-8 rounded hover:bg-white/10 transition-colors text-lg"
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Node type picker */}
+                <div className="relative">
+                  <button
+                    onClick={() => { setShowNodeTypePicker(!showNodeTypePicker); setShowEmojiPicker(false); }}
+                    className="px-2 py-1 rounded-lg text-xs transition-all hover:bg-white/5"
+                    style={{ color: colors.textSecondary, border: `1px solid ${colors.border}` }}
+                    title="更换节点类型"
+                  >
+                    {nodeTypeOptions.find(t => t.value === selectedNode.data.nodeType)?.label || '叶子'} ▼
+                  </button>
+                  {showNodeTypePicker && (
+                    <div
+                      className="absolute left-0 top-full mt-1 py-1 rounded-lg shadow-xl z-50"
+                      style={{ background: colors.bgSecondary, border: `1px solid ${colors.border}`, minWidth: '120px' }}
+                    >
+                      {nodeTypeOptions.map((opt) => (
+                        <button
+                          key={opt.value}
+                          onClick={() => handleChangeNodeType(opt.value)}
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-white/5 transition-colors flex items-center justify-between"
+                          style={{
+                            color: selectedNode.data.nodeType === opt.value ? colors.accent : colors.text,
+                          }}
+                        >
+                          <span>{opt.label}</span>
+                          <span className="text-xs" style={{ color: colors.textMuted }}>{opt.desc}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
                 {/* Color picker */}
                 <div className="flex items-center gap-1 ml-2 pl-2" style={{ borderLeft: `1px solid ${colors.border}` }}>
@@ -722,13 +1016,26 @@ export const LifeSystemMap: React.FC<LifeSystemMapProps> = ({
                 缩放
               </span>
               <span className="flex items-center gap-1.5">
-                <kbd className="px-1.5 py-0.5 rounded text-[10px]" style={{ background: colors.bgSecondary, border: `1px solid ${colors.border}` }}>边缘</kbd>
-                连线
+                <kbd className="px-1.5 py-0.5 rounded text-[10px]" style={{ background: colors.bgSecondary, border: `1px solid ${colors.border}` }}>Del</kbd>
+                删除
+              </span>
+              <span className="flex items-center gap-1.5">
+                <kbd className="px-1.5 py-0.5 rounded text-[10px]" style={{ background: colors.bgSecondary, border: `1px solid ${colors.border}` }}>Ctrl+Z</kbd>
+                撤销
               </span>
             </div>
           </Panel>
         </ReactFlow>
       </div>
     </div>
+  );
+};
+
+// Wrapper component with ReactFlowProvider
+export const LifeSystemMap: React.FC<LifeSystemMapProps> = (props) => {
+  return (
+    <ReactFlowProvider>
+      <LifeSystemMapInner {...props} />
+    </ReactFlowProvider>
   );
 };
