@@ -38,6 +38,7 @@ export interface SacredSeatData {
   rules: ExceptionRule[];
   todos: TodoItem[];
   mindMapLayout?: Record<string, NodeLayout>;
+  lifeSystemMindMap?: any; // jsMind data format
 }
 
 export interface AppState {

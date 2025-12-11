@@ -8,6 +8,7 @@ import { StatsBoard } from './components/StatsBoard';
 import { BackupManager } from './components/BackupManager';
 import { BookingModal } from './components/BookingModal';
 import { SessionDetailModal } from './components/SessionDetailModal';
+import { LifeSystemMap } from './components/LifeSystemMap';
 
 const generateId = uuidv4;
 
@@ -87,6 +88,9 @@ export default function App() {
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [detailTitle, setDetailTitle] = useState('');
   const [detailSessions, setDetailSessions] = useState<FocusSession[]>([]);
+
+  // Life System MindMap State
+  const [isLifeSystemOpen, setIsLifeSystemOpen] = useState(false);
 
   // Load from local storage
   useEffect(() => {
@@ -303,6 +307,12 @@ export default function App() {
     setState(prev => ({ ...prev, data: newData }));
   };
 
+  // --- Life System MindMap ---
+  const saveLifeSystemData = (mindMapData: any) => {
+    updateData(data => ({ ...data, lifeSystemMindMap: mindMapData }));
+    alert('Life System 已保存!');
+  };
+
   if (!loaded) return <div className="min-h-screen bg-black text-white flex items-center justify-center">Loading...</div>;
 
   // --- RENDER: NORMAL STAGE ---
@@ -329,9 +339,21 @@ export default function App() {
             </div>
           </div>
           
-          <div className="flex items-center gap-4 bg-zinc-900/50 px-4 py-2 rounded-lg border border-white/5">
-             <div className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Current Chain</div>
-             <div className="text-xl font-bold font-mono text-indigo-400 leading-none">{state.data.chainCount}</div>
+          <div className="flex items-center gap-3">
+            {/* Life System Button */}
+            <button
+              onClick={() => setIsLifeSystemOpen(true)}
+              className="px-3 py-2 bg-zinc-800/50 hover:bg-zinc-700/50 border border-white/5 hover:border-indigo-500/50 rounded-lg text-sm transition-all flex items-center gap-2"
+              title="Life System MindMap"
+            >
+              <span>🧠</span>
+              <span className="hidden sm:inline text-gray-400">Life System</span>
+            </button>
+
+            <div className="flex items-center gap-4 bg-zinc-900/50 px-4 py-2 rounded-lg border border-white/5">
+               <div className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Current Chain</div>
+               <div className="text-xl font-bold font-mono text-indigo-400 leading-none">{state.data.chainCount}</div>
+            </div>
           </div>
         </header>
 
@@ -436,6 +458,15 @@ export default function App() {
           onUpdateSession={updateSession}
           onDeleteSession={deleteSession}
         />
+
+        {/* Life System MindMap */}
+        {isLifeSystemOpen && (
+          <LifeSystemMap
+            initialData={state.data.lifeSystemMindMap}
+            onSave={saveLifeSystemData}
+            onClose={() => setIsLifeSystemOpen(false)}
+          />
+        )}
       </div>
     </div>
   );
