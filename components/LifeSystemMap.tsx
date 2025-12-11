@@ -18,6 +18,8 @@ import {
   ReactFlowProvider,
   NodeChange,
   useReactFlow,
+  SelectionMode,
+  PanOnScrollMode,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { toPng, toSvg } from 'html-to-image';
@@ -1274,6 +1276,15 @@ const LifeSystemMapInner: React.FC<LifeSystemMapProps> = ({
             type: 'smoothstep',
           }}
           proOptions={{ hideAttribution: true }}
+          // Pan with scroll wheel
+          panOnScroll={true}
+          panOnScrollMode={PanOnScrollMode.Free}
+          // Selection box with left mouse drag on empty space
+          selectionOnDrag={true}
+          selectionMode={SelectionMode.Partial}
+          // Zoom with Ctrl+scroll or pinch
+          zoomOnScroll={false}
+          zoomOnPinch={true}
         >
           {/* Helper Lines for alignment */}
           <HelperLinesRenderer
@@ -1315,12 +1326,16 @@ const LifeSystemMapInner: React.FC<LifeSystemMapProps> = ({
           <Panel position="bottom-right" className="text-xs p-3" style={{ color: colors.textMuted }}>
             <div className="flex items-center gap-4">
               <span className="flex items-center gap-1.5">
-                <kbd className="px-1.5 py-0.5 rounded text-[10px]" style={{ background: colors.bgSecondary, border: `1px solid ${colors.border}` }}>拖拽</kbd>
-                移动
+                <kbd className="px-1.5 py-0.5 rounded text-[10px]" style={{ background: colors.bgSecondary, border: `1px solid ${colors.border}` }}>滚轮</kbd>
+                平移
               </span>
               <span className="flex items-center gap-1.5">
-                <kbd className="px-1.5 py-0.5 rounded text-[10px]" style={{ background: colors.bgSecondary, border: `1px solid ${colors.border}` }}>滚轮</kbd>
+                <kbd className="px-1.5 py-0.5 rounded text-[10px]" style={{ background: colors.bgSecondary, border: `1px solid ${colors.border}` }}>Ctrl+滚轮</kbd>
                 缩放
+              </span>
+              <span className="flex items-center gap-1.5">
+                <kbd className="px-1.5 py-0.5 rounded text-[10px]" style={{ background: colors.bgSecondary, border: `1px solid ${colors.border}` }}>拖拽空白</kbd>
+                框选
               </span>
               <span className="flex items-center gap-1.5">
                 <kbd className="px-1.5 py-0.5 rounded text-[10px]" style={{ background: colors.bgSecondary, border: `1px solid ${colors.border}` }}>Del</kbd>
