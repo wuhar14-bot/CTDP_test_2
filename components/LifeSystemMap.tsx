@@ -319,46 +319,75 @@ interface HistoryState {
 }
 
 // Snap threshold in pixels
-const SNAP_THRESHOLD = 5;
+const SNAP_THRESHOLD = 8;
+
+// Helper to get node dimensions from measured or estimate from type
+function getNodeDimensions(node: Node): { width: number; height: number } {
+  // Use measured dimensions if available (from React Flow)
+  if (node.measured?.width && node.measured?.height) {
+    return { width: node.measured.width, height: node.measured.height };
+  }
+  // Fallback: estimate based on node type
+  const nodeType = node.data?.nodeType as string || 'leaf';
+  switch (nodeType) {
+    case 'root':
+      return { width: 180, height: 60 };
+    case 'category':
+      return { width: 120, height: 48 };
+    default:
+      return { width: 100, height: 40 };
+  }
+}
+
+// Result type for helper lines
+interface HelperLinesResult {
+  horizontal: number | null;
+  vertical: number | null;
+  snapX: number | null;
+  snapY: number | null;
+  alignType: 'center' | 'top' | 'bottom' | 'left' | 'right' | null;
+}
 
 // Function to get helper lines when dragging a node
 function getHelperLines(
   draggingNode: Node,
-  nodes: Node[],
-  nodeWidth = 150,
-  nodeHeight = 40
-): { horizontal: number | null; vertical: number | null; snapX: number | null; snapY: number | null } {
-  const draggingNodeCenterX = draggingNode.position.x + nodeWidth / 2;
-  const draggingNodeCenterY = draggingNode.position.y + nodeHeight / 2;
+  nodes: Node[]
+): HelperLinesResult {
+  const draggingDim = getNodeDimensions(draggingNode);
+  const draggingNodeCenterX = draggingNode.position.x + draggingDim.width / 2;
+  const draggingNodeCenterY = draggingNode.position.y + draggingDim.height / 2;
   const draggingNodeLeft = draggingNode.position.x;
-  const draggingNodeRight = draggingNode.position.x + nodeWidth;
+  const draggingNodeRight = draggingNode.position.x + draggingDim.width;
   const draggingNodeTop = draggingNode.position.y;
-  const draggingNodeBottom = draggingNode.position.y + nodeHeight;
+  const draggingNodeBottom = draggingNode.position.y + draggingDim.height;
 
   let closestHorizontal: number | null = null;
   let closestVertical: number | null = null;
   let snapX: number | null = null;
   let snapY: number | null = null;
+  let alignType: HelperLinesResult['alignType'] = null;
   let minHorizontalDistance = SNAP_THRESHOLD;
   let minVerticalDistance = SNAP_THRESHOLD;
 
   for (const node of nodes) {
     if (node.id === draggingNode.id) continue;
 
-    const nodeCenterX = node.position.x + nodeWidth / 2;
-    const nodeCenterY = node.position.y + nodeHeight / 2;
+    const nodeDim = getNodeDimensions(node);
+    const nodeCenterX = node.position.x + nodeDim.width / 2;
+    const nodeCenterY = node.position.y + nodeDim.height / 2;
     const nodeLeft = node.position.x;
-    const nodeRight = node.position.x + nodeWidth;
+    const nodeRight = node.position.x + nodeDim.width;
     const nodeTop = node.position.y;
-    const nodeBottom = node.position.y + nodeHeight;
+    const nodeBottom = node.position.y + nodeDim.height;
 
     // Check vertical alignment (for horizontal line)
-    // Center to center
+    // Center to center (Y axis)
     const centerYDist = Math.abs(draggingNodeCenterY - nodeCenterY);
     if (centerYDist < minHorizontalDistance) {
       minHorizontalDistance = centerYDist;
       closestHorizontal = nodeCenterY;
-      snapY = nodeCenterY - nodeHeight / 2;
+      // Snap so that centers align
+      snapY = nodeCenterY - draggingDim.height / 2;
     }
     // Top to top
     const topDist = Math.abs(draggingNodeTop - nodeTop);
@@ -372,16 +401,17 @@ function getHelperLines(
     if (bottomDist < minHorizontalDistance) {
       minHorizontalDistance = bottomDist;
       closestHorizontal = nodeBottom;
-      snapY = nodeBottom - nodeHeight;
+      snapY = nodeBottom - draggingDim.height;
     }
 
     // Check horizontal alignment (for vertical line)
-    // Center to center
+    // Center to center (X axis)
     const centerXDist = Math.abs(draggingNodeCenterX - nodeCenterX);
     if (centerXDist < minVerticalDistance) {
       minVerticalDistance = centerXDist;
       closestVertical = nodeCenterX;
-      snapX = nodeCenterX - nodeWidth / 2;
+      // Snap so that centers align
+      snapX = nodeCenterX - draggingDim.width / 2;
     }
     // Left to left
     const leftDist = Math.abs(draggingNodeLeft - nodeLeft);
@@ -395,11 +425,11 @@ function getHelperLines(
     if (rightDist < minVerticalDistance) {
       minVerticalDistance = rightDist;
       closestVertical = nodeRight;
-      snapX = nodeRight - nodeWidth;
+      snapX = nodeRight - draggingDim.width;
     }
   }
 
-  return { horizontal: closestHorizontal, vertical: closestVertical, snapX, snapY };
+  return { horizontal: closestHorizontal, vertical: closestVertical, snapX, snapY, alignType };
 }
 
 // Helper Lines Component that renders inside ReactFlow
