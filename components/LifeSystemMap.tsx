@@ -16,6 +16,8 @@ import {
   Position,
   NodeProps,
   ReactFlowProvider,
+  NodeChange,
+  useReactFlow,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { toPng, toSvg } from 'html-to-image';
@@ -316,6 +318,143 @@ interface HistoryState {
   edges: Edge[];
 }
 
+// Snap threshold in pixels
+const SNAP_THRESHOLD = 5;
+
+// Function to get helper lines when dragging a node
+function getHelperLines(
+  draggingNode: Node,
+  nodes: Node[],
+  nodeWidth = 150,
+  nodeHeight = 40
+): { horizontal: number | null; vertical: number | null; snapX: number | null; snapY: number | null } {
+  const draggingNodeCenterX = draggingNode.position.x + nodeWidth / 2;
+  const draggingNodeCenterY = draggingNode.position.y + nodeHeight / 2;
+  const draggingNodeLeft = draggingNode.position.x;
+  const draggingNodeRight = draggingNode.position.x + nodeWidth;
+  const draggingNodeTop = draggingNode.position.y;
+  const draggingNodeBottom = draggingNode.position.y + nodeHeight;
+
+  let closestHorizontal: number | null = null;
+  let closestVertical: number | null = null;
+  let snapX: number | null = null;
+  let snapY: number | null = null;
+  let minHorizontalDistance = SNAP_THRESHOLD;
+  let minVerticalDistance = SNAP_THRESHOLD;
+
+  for (const node of nodes) {
+    if (node.id === draggingNode.id) continue;
+
+    const nodeCenterX = node.position.x + nodeWidth / 2;
+    const nodeCenterY = node.position.y + nodeHeight / 2;
+    const nodeLeft = node.position.x;
+    const nodeRight = node.position.x + nodeWidth;
+    const nodeTop = node.position.y;
+    const nodeBottom = node.position.y + nodeHeight;
+
+    // Check vertical alignment (for horizontal line)
+    // Center to center
+    const centerYDist = Math.abs(draggingNodeCenterY - nodeCenterY);
+    if (centerYDist < minHorizontalDistance) {
+      minHorizontalDistance = centerYDist;
+      closestHorizontal = nodeCenterY;
+      snapY = nodeCenterY - nodeHeight / 2;
+    }
+    // Top to top
+    const topDist = Math.abs(draggingNodeTop - nodeTop);
+    if (topDist < minHorizontalDistance) {
+      minHorizontalDistance = topDist;
+      closestHorizontal = nodeTop;
+      snapY = nodeTop;
+    }
+    // Bottom to bottom
+    const bottomDist = Math.abs(draggingNodeBottom - nodeBottom);
+    if (bottomDist < minHorizontalDistance) {
+      minHorizontalDistance = bottomDist;
+      closestHorizontal = nodeBottom;
+      snapY = nodeBottom - nodeHeight;
+    }
+
+    // Check horizontal alignment (for vertical line)
+    // Center to center
+    const centerXDist = Math.abs(draggingNodeCenterX - nodeCenterX);
+    if (centerXDist < minVerticalDistance) {
+      minVerticalDistance = centerXDist;
+      closestVertical = nodeCenterX;
+      snapX = nodeCenterX - nodeWidth / 2;
+    }
+    // Left to left
+    const leftDist = Math.abs(draggingNodeLeft - nodeLeft);
+    if (leftDist < minVerticalDistance) {
+      minVerticalDistance = leftDist;
+      closestVertical = nodeLeft;
+      snapX = nodeLeft;
+    }
+    // Right to right
+    const rightDist = Math.abs(draggingNodeRight - nodeRight);
+    if (rightDist < minVerticalDistance) {
+      minVerticalDistance = rightDist;
+      closestVertical = nodeRight;
+      snapX = nodeRight - nodeWidth;
+    }
+  }
+
+  return { horizontal: closestHorizontal, vertical: closestVertical, snapX, snapY };
+}
+
+// Helper Lines Component that renders inside ReactFlow
+const HelperLinesRenderer: React.FC<{
+  horizontal: number | null;
+  vertical: number | null;
+}> = ({ horizontal, vertical }) => {
+  const { getViewport } = useReactFlow();
+  const viewport = getViewport();
+
+  // Transform flow coordinates to screen coordinates
+  const transformX = (x: number) => x * viewport.zoom + viewport.x;
+  const transformY = (y: number) => y * viewport.zoom + viewport.y;
+
+  return (
+    <svg
+      style={{
+        position: 'absolute',
+        width: '100%',
+        height: '100%',
+        top: 0,
+        left: 0,
+        pointerEvents: 'none',
+        zIndex: 1000,
+        overflow: 'visible',
+      }}
+    >
+      {horizontal !== null && (
+        <line
+          x1="-10000"
+          y1={transformY(horizontal)}
+          x2="10000"
+          y2={transformY(horizontal)}
+          stroke={colors.accent}
+          strokeWidth="1"
+          strokeDasharray="6,4"
+          opacity="0.8"
+        />
+      )}
+      {vertical !== null && (
+        <line
+          x1={transformX(vertical)}
+          y1="-10000"
+          x2={transformX(vertical)}
+          y2="10000"
+          stroke={colors.accent}
+          strokeWidth="1"
+          strokeDasharray="6,4"
+          opacity="0.8"
+        />
+      )}
+    </svg>
+  );
+};
+
 const LifeSystemMapInner: React.FC<LifeSystemMapProps> = ({
   initialData,
   onSave,
@@ -330,6 +469,10 @@ const LifeSystemMapInner: React.FC<LifeSystemMapProps> = ({
   const [editLabel, setEditLabel] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showNodeTypePicker, setShowNodeTypePicker] = useState(false);
+
+  // Helper lines for alignment
+  const [helperLineHorizontal, setHelperLineHorizontal] = useState<number | null>(null);
+  const [helperLineVertical, setHelperLineVertical] = useState<number | null>(null);
 
   // Undo/Redo history
   const [history, setHistory] = useState<HistoryState[]>([]);
@@ -454,6 +597,62 @@ const LifeSystemMapInner: React.FC<LifeSystemMapProps> = ({
   useEffect(() => {
     saveToHistory();
   }, [nodes.length, edges.length]); // Only save on structural changes
+
+  // Custom onNodesChange with snap functionality
+  const customOnNodesChange = useCallback(
+    (changes: NodeChange[]) => {
+      // Check if any node is being dragged
+      const dragChange = changes.find(
+        (change) => change.type === 'position' && change.dragging
+      );
+
+      if (dragChange && dragChange.type === 'position' && dragChange.position) {
+        const draggingNode = nodes.find((n) => n.id === dragChange.id);
+        if (draggingNode) {
+          // Create a temporary node with the new position for calculation
+          const tempNode = {
+            ...draggingNode,
+            position: dragChange.position,
+          };
+
+          const { horizontal, vertical, snapX, snapY } = getHelperLines(tempNode, nodes);
+
+          setHelperLineHorizontal(horizontal);
+          setHelperLineVertical(vertical);
+
+          // Apply snap if close enough
+          if (snapX !== null || snapY !== null) {
+            const snappedChanges = changes.map((change) => {
+              if (change.type === 'position' && change.id === dragChange.id && change.position) {
+                return {
+                  ...change,
+                  position: {
+                    x: snapX !== null ? snapX : change.position.x,
+                    y: snapY !== null ? snapY : change.position.y,
+                  },
+                };
+              }
+              return change;
+            });
+            onNodesChange(snappedChanges as NodeChange[]);
+            return;
+          }
+        }
+      } else {
+        // Clear helper lines when not dragging
+        const isDragging = changes.some(
+          (change) => change.type === 'position' && change.dragging
+        );
+        if (!isDragging) {
+          setHelperLineHorizontal(null);
+          setHelperLineVertical(null);
+        }
+      }
+
+      onNodesChange(changes);
+    },
+    [nodes, onNodesChange]
+  );
 
   // Handle new connections
   const onConnect = useCallback(
@@ -957,7 +1156,7 @@ const LifeSystemMapInner: React.FC<LifeSystemMapProps> = ({
         <ReactFlow
           nodes={nodes}
           edges={edges}
-          onNodesChange={onNodesChange}
+          onNodesChange={customOnNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           onNodeClick={onNodeClick}
@@ -973,6 +1172,11 @@ const LifeSystemMapInner: React.FC<LifeSystemMapProps> = ({
           }}
           proOptions={{ hideAttribution: true }}
         >
+          {/* Helper Lines for alignment */}
+          <HelperLinesRenderer
+            horizontal={helperLineHorizontal}
+            vertical={helperLineVertical}
+          />
           <Controls
             style={{
               background: colors.bgTertiary,
