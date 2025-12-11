@@ -131,8 +131,8 @@ const CustomNode = memo(({ data, selected }: NodeProps) => {
       <Handle type="source" position={Position.Left} id="left-source" style={{ ...handleStyle, opacity: 0 }} />
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        {data.icon && <span style={{ fontSize: nodeType === 'root' ? '24px' : '16px' }}>{data.icon as string}</span>}
-        <span>{data.label as string}</span>
+        {data.icon ? <span style={{ fontSize: nodeType === 'root' ? '24px' : '16px' }}>{String(data.icon)}</span> : null}
+        <span>{String(data.label)}</span>
       </div>
 
       {/* Bottom handles */}
