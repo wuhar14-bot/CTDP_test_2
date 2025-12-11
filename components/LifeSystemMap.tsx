@@ -299,6 +299,7 @@ export const LifeSystemMap: React.FC<LifeSystemMapProps> = ({
   const [nodes, setNodes, onNodesChange] = useNodesState(initialData?.nodes || DEFAULT_NODES);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialData?.edges || DEFAULT_EDGES);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
+  const [selectedEdge, setSelectedEdge] = useState<Edge | null>(null);
   const [newNodeLabel, setNewNodeLabel] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [editLabel, setEditLabel] = useState('');
@@ -316,9 +317,24 @@ export const LifeSystemMap: React.FC<LifeSystemMapProps> = ({
   // Handle node selection
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
     setSelectedNode(node);
+    setSelectedEdge(null);
     setEditLabel(node.data.label as string);
     setIsEditing(false);
   }, []);
+
+  // Handle edge selection
+  const onEdgeClick = useCallback((_: React.MouseEvent, edge: Edge) => {
+    setSelectedEdge(edge);
+    setSelectedNode(null);
+    setIsEditing(false);
+  }, []);
+
+  // Delete selected edge
+  const handleDeleteEdge = useCallback(() => {
+    if (!selectedEdge) return;
+    setEdges((eds) => eds.filter((e) => e.id !== selectedEdge.id));
+    setSelectedEdge(null);
+  }, [selectedEdge, setEdges]);
 
   // Add new node
   const handleAddNode = useCallback(() => {
@@ -619,6 +635,22 @@ export const LifeSystemMap: React.FC<LifeSystemMapProps> = ({
               </>
             )}
           </div>
+        ) : selectedEdge ? (
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 px-3 py-1 rounded-lg" style={{ background: colors.bgTertiary }}>
+              <span style={{ color: colors.textSecondary }}>连接线已选中</span>
+            </div>
+            <Button
+              variant="ghost"
+              onClick={handleDeleteEdge}
+              className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              删除连线
+            </Button>
+          </div>
         ) : (
           <span className="text-sm" style={{ color: colors.textMuted }}>
             点击节点选择，从边缘拖出创建连线
@@ -635,7 +667,8 @@ export const LifeSystemMap: React.FC<LifeSystemMapProps> = ({
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           onNodeClick={onNodeClick}
-          onPaneClick={() => setSelectedNode(null)}
+          onEdgeClick={onEdgeClick}
+          onPaneClick={() => { setSelectedNode(null); setSelectedEdge(null); }}
           nodeTypes={nodeTypes}
           fitView
           attributionPosition="bottom-left"
