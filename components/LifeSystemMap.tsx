@@ -588,7 +588,6 @@ const LifeSystemMapInner: React.FC<LifeSystemMapProps> = ({
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault();
         onSave({ nodes, edges });
-        alert('已保存!');
       }
       // Ctrl+Z to undo
       if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
