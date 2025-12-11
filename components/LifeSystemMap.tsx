@@ -1275,9 +1275,10 @@ const LifeSystemMapInner: React.FC<LifeSystemMapProps> = ({
             type: 'smoothstep',
           }}
           proOptions={{ hideAttribution: true }}
-          // Pan with scroll wheel
+          // Pan with scroll wheel (not with mouse drag)
           panOnScroll={true}
           panOnScrollMode={PanOnScrollMode.Free}
+          panOnDrag={false}
           // Selection box with left mouse drag on empty space
           selectionOnDrag={true}
           selectionMode={SelectionMode.Partial}
