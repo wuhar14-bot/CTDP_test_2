@@ -1,4 +1,4 @@
-import React, { useCallback, useState, memo, useEffect, useRef } from 'react';
+import React, { useCallback, useState, memo, useEffect, useRef, useMemo } from 'react';
 import {
   ReactFlow,
   MiniMap,
@@ -716,6 +716,40 @@ const LifeSystemMapInner: React.FC<LifeSystemMapProps> = ({
     setSelectedEdge(null);
   }, [selectedEdge, setEdges]);
 
+  // Change edge color
+  const handleChangeEdgeColor = useCallback((color: string) => {
+    if (!selectedEdge) return;
+    setEdges((eds) =>
+      eds.map((e) =>
+        e.id === selectedEdge.id
+          ? { ...e, style: { ...e.style, stroke: color, strokeWidth: 2 } }
+          : e
+      )
+    );
+    // Update selectedEdge state to reflect the change
+    setSelectedEdge((prev) => prev ? { ...prev, style: { ...prev.style, stroke: color, strokeWidth: 2 } } : null);
+  }, [selectedEdge, setEdges]);
+
+  // Compute edges with highlight for selected edge
+  const highlightedEdges = useMemo(() => {
+    return edges.map((edge) => {
+      if (selectedEdge && edge.id === selectedEdge.id) {
+        // Highlight selected edge
+        const currentStroke = (edge.style?.stroke as string) || 'rgba(255,255,255,0.15)';
+        return {
+          ...edge,
+          style: {
+            ...edge.style,
+            strokeWidth: 4,
+            filter: `drop-shadow(0 0 6px ${currentStroke})`,
+          },
+          animated: true,
+        };
+      }
+      return edge;
+    });
+  }, [edges, selectedEdge]);
+
   // Add new node
   const handleAddNode = useCallback(() => {
     if (!newNodeLabel.trim()) return;
@@ -1161,8 +1195,47 @@ const LifeSystemMapInner: React.FC<LifeSystemMapProps> = ({
         ) : selectedEdge ? (
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 px-3 py-1 rounded-lg" style={{ background: colors.bgTertiary }}>
+              <div
+                className="w-4 h-1 rounded-full"
+                style={{ background: (selectedEdge.style?.stroke as string) || 'rgba(255,255,255,0.15)' }}
+              />
               <span style={{ color: colors.textSecondary }}>连接线已选中</span>
             </div>
+
+            {/* Edge color picker */}
+            <div className="flex items-center gap-1 pl-2" style={{ borderLeft: `1px solid ${colors.border}` }}>
+              <span className="text-xs mr-1" style={{ color: colors.textMuted }}>颜色:</span>
+              {colorPalette.map((c) => (
+                <button
+                  key={c.value}
+                  onClick={() => handleChangeEdgeColor(c.value)}
+                  title={c.name}
+                  className="w-5 h-5 rounded-full transition-all hover:scale-110"
+                  style={{
+                    background: c.value,
+                    border: (selectedEdge.style?.stroke as string) === c.value
+                      ? '2px solid white'
+                      : '2px solid transparent',
+                    boxShadow: (selectedEdge.style?.stroke as string) === c.value
+                      ? `0 0 8px ${c.value}`
+                      : 'none',
+                  }}
+                />
+              ))}
+              {/* Default/subtle color option */}
+              <button
+                onClick={() => handleChangeEdgeColor('rgba(255,255,255,0.15)')}
+                title="默认"
+                className="w-5 h-5 rounded-full transition-all hover:scale-110"
+                style={{
+                  background: 'rgba(255,255,255,0.15)',
+                  border: (selectedEdge.style?.stroke as string) === 'rgba(255,255,255,0.15)'
+                    ? '2px solid white'
+                    : '2px solid transparent',
+                }}
+              />
+            </div>
+
             <Button
               variant="ghost"
               onClick={handleDeleteEdge}
@@ -1185,7 +1258,7 @@ const LifeSystemMapInner: React.FC<LifeSystemMapProps> = ({
       <div className="flex-1">
         <ReactFlow
           nodes={nodes}
-          edges={edges}
+          edges={highlightedEdges}
           onNodesChange={customOnNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
