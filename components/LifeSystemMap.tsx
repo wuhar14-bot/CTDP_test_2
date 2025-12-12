@@ -732,39 +732,51 @@ const LifeSystemMapInner: React.FC<LifeSystemMapProps> = ({
   // Get React Flow instance for coordinate conversion
   const { screenToFlowPosition } = useReactFlow();
 
-  // Handle double-click on empty canvas to create new node
-  const onPaneDoubleClick = useCallback((event: React.MouseEvent) => {
-    // Prevent browser default double-click zoom behavior
-    event.preventDefault();
-    event.stopPropagation();
+  // Track last click time for manual double-click detection on pane
+  const lastPaneClickTime = useRef(0);
 
-    // Convert screen coordinates to flow coordinates
-    const position = screenToFlowPosition({
-      x: event.clientX,
-      y: event.clientY,
-    });
+  // Handle pane click - detect double click manually
+  const handlePaneClick = useCallback((event: React.MouseEvent) => {
+    const now = Date.now();
+    const timeDiff = now - lastPaneClickTime.current;
+    lastPaneClickTime.current = now;
 
-    // Estimate node size for centering (leaf node default)
-    const nodeWidth = 100;
-    const nodeHeight = 40;
+    // If clicked within 300ms, treat as double click
+    if (timeDiff < 300) {
+      // Prevent default zoom behavior
+      event.preventDefault();
 
-    const newNode: Node = {
-      id: `node_${Date.now()}`,
-      type: 'custom',
-      // Place node centered on cursor position
-      position: {
-        x: position.x - nodeWidth / 2,
-        y: position.y - nodeHeight / 2,
-      },
-      data: {
-        label: '新节点',
-        icon: '📌',
-        nodeType: 'leaf'
-      },
-    };
+      // Convert screen coordinates to flow coordinates
+      const position = screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      });
 
-    setNodes((nds) => [...nds, newNode]);
-    setSelectedNode(newNode);
+      // Estimate node size for centering (leaf node default)
+      const nodeWidth = 100;
+      const nodeHeight = 40;
+
+      const newNode: Node = {
+        id: `node_${Date.now()}`,
+        type: 'custom',
+        position: {
+          x: position.x - nodeWidth / 2,
+          y: position.y - nodeHeight / 2,
+        },
+        data: {
+          label: '新节点',
+          icon: '📌',
+          nodeType: 'leaf'
+        },
+      };
+
+      setNodes((nds) => [...nds, newNode]);
+      setSelectedNode(newNode);
+    } else {
+      // Single click - deselect
+      setSelectedNode(null);
+      setSelectedEdge(null);
+    }
   }, [setNodes, screenToFlowPosition]);
 
   // Delete selected edge
@@ -786,6 +798,29 @@ const LifeSystemMapInner: React.FC<LifeSystemMapProps> = ({
     );
     // Update selectedEdge state to reflect the change
     setSelectedEdge((prev) => prev ? { ...prev, style: { ...prev.style, stroke: color, strokeWidth: 2 } } : null);
+  }, [selectedEdge, setEdges]);
+
+  // Change edge arrow direction
+  // direction: 'end' | 'start' | 'both' | 'none'
+  const handleChangeEdgeArrow = useCallback((direction: 'end' | 'start' | 'both' | 'none') => {
+    if (!selectedEdge) return;
+    const edgeColor = (selectedEdge.style?.stroke as string) || 'rgba(255,255,255,0.15)';
+
+    const markerEnd = (direction === 'end' || direction === 'both')
+      ? { type: MarkerType.ArrowClosed, color: edgeColor }
+      : undefined;
+    const markerStart = (direction === 'start' || direction === 'both')
+      ? { type: MarkerType.ArrowClosed, color: edgeColor }
+      : undefined;
+
+    setEdges((eds) =>
+      eds.map((e) =>
+        e.id === selectedEdge.id
+          ? { ...e, markerEnd, markerStart }
+          : e
+      )
+    );
+    setSelectedEdge((prev) => prev ? { ...prev, markerEnd, markerStart } : null);
   }, [selectedEdge, setEdges]);
 
   // Compute edges with highlight for selected edge
@@ -1294,6 +1329,55 @@ const LifeSystemMapInner: React.FC<LifeSystemMapProps> = ({
               />
             </div>
 
+            {/* Arrow direction picker */}
+            <div className="flex items-center gap-1 pl-2" style={{ borderLeft: `1px solid ${colors.border}` }}>
+              <span className="text-xs mr-1" style={{ color: colors.textMuted }}>箭头:</span>
+              <button
+                onClick={() => handleChangeEdgeArrow('end')}
+                title="终点箭头"
+                className="px-2 py-1 text-xs rounded transition-all hover:bg-white/10"
+                style={{
+                  color: selectedEdge.markerEnd && !selectedEdge.markerStart ? colors.accent : colors.textMuted,
+                  border: `1px solid ${selectedEdge.markerEnd && !selectedEdge.markerStart ? colors.accent : colors.border}`,
+                }}
+              >
+                →
+              </button>
+              <button
+                onClick={() => handleChangeEdgeArrow('start')}
+                title="起点箭头"
+                className="px-2 py-1 text-xs rounded transition-all hover:bg-white/10"
+                style={{
+                  color: selectedEdge.markerStart && !selectedEdge.markerEnd ? colors.accent : colors.textMuted,
+                  border: `1px solid ${selectedEdge.markerStart && !selectedEdge.markerEnd ? colors.accent : colors.border}`,
+                }}
+              >
+                ←
+              </button>
+              <button
+                onClick={() => handleChangeEdgeArrow('both')}
+                title="双向箭头"
+                className="px-2 py-1 text-xs rounded transition-all hover:bg-white/10"
+                style={{
+                  color: selectedEdge.markerStart && selectedEdge.markerEnd ? colors.accent : colors.textMuted,
+                  border: `1px solid ${selectedEdge.markerStart && selectedEdge.markerEnd ? colors.accent : colors.border}`,
+                }}
+              >
+                ↔
+              </button>
+              <button
+                onClick={() => handleChangeEdgeArrow('none')}
+                title="无箭头"
+                className="px-2 py-1 text-xs rounded transition-all hover:bg-white/10"
+                style={{
+                  color: !selectedEdge.markerStart && !selectedEdge.markerEnd ? colors.accent : colors.textMuted,
+                  border: `1px solid ${!selectedEdge.markerStart && !selectedEdge.markerEnd ? colors.accent : colors.border}`,
+                }}
+              >
+                —
+              </button>
+            </div>
+
             <Button
               variant="ghost"
               onClick={handleDeleteEdge}
@@ -1323,8 +1407,7 @@ const LifeSystemMapInner: React.FC<LifeSystemMapProps> = ({
           onNodeClick={onNodeClick}
           onNodeDoubleClick={onNodeDoubleClick}
           onEdgeClick={onEdgeClick}
-          onPaneClick={() => { setSelectedNode(null); setSelectedEdge(null); }}
-          onDoubleClick={onPaneDoubleClick}
+          onPaneClick={handlePaneClick}
           nodeTypes={nodeTypes}
           fitView
           attributionPosition="bottom-left"
