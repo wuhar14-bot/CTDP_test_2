@@ -735,13 +735,17 @@ const LifeSystemMapInner: React.FC<LifeSystemMapProps> = ({
       y: event.clientY,
     });
 
+    // Estimate node size for centering (leaf node default)
+    const nodeWidth = 100;
+    const nodeHeight = 40;
+
     const newNode: Node = {
       id: `node_${Date.now()}`,
       type: 'custom',
       // Place node centered on cursor position
       position: {
-        x: position.x,
-        y: position.y,
+        x: position.x - nodeWidth / 2,
+        y: position.y - nodeHeight / 2,
       },
       data: {
         label: '新节点',
