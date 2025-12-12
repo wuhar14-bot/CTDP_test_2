@@ -1415,7 +1415,6 @@ const LifeSystemMapInner: React.FC<LifeSystemMapProps> = ({
           defaultEdgeOptions={{
             style: { stroke: 'rgba(255,255,255,0.15)', strokeWidth: 1.5 },
             type: 'smoothstep',
-            markerEnd: { type: MarkerType.ArrowClosed, color: 'rgba(255,255,255,0.15)' },
           }}
           proOptions={{ hideAttribution: true }}
           // Pan with scroll wheel or middle mouse button
