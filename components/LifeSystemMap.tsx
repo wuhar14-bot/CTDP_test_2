@@ -24,7 +24,7 @@ import {
 import '@xyflow/react/dist/style.css';
 import { toPng, toSvg } from 'html-to-image';
 
-// Custom CSS for better contrast on controls
+// Custom CSS for better contrast on controls and cursor style
 const customStyles = `
   .react-flow-controls-custom button {
     background: #2a2a30 !important;
@@ -42,6 +42,16 @@ const customStyles = `
   }
   .react-flow-controls-custom button:hover svg {
     fill: #93c5fd !important;
+  }
+  /* Override React Flow default grab cursor to arrow */
+  .react-flow__pane {
+    cursor: default !important;
+  }
+  .react-flow__node {
+    cursor: default !important;
+  }
+  .react-flow__node:active {
+    cursor: grabbing !important;
   }
 `;
 
@@ -710,21 +720,29 @@ const LifeSystemMapInner: React.FC<LifeSystemMapProps> = ({
     setIsEditing(false);
   }, []);
 
+  // Get React Flow instance for coordinate conversion
+  const { screenToFlowPosition } = useReactFlow();
+
   // Handle double-click on empty canvas to create new node
   const onPaneDoubleClick = useCallback((event: React.MouseEvent) => {
-    // Get the position in flow coordinates
-    const reactFlowBounds = (event.target as HTMLElement).closest('.react-flow')?.getBoundingClientRect();
-    if (!reactFlowBounds) return;
+    // Prevent browser default double-click zoom behavior
+    event.preventDefault();
+    event.stopPropagation();
 
-    const position = {
-      x: event.clientX - reactFlowBounds.left - 50,
-      y: event.clientY - reactFlowBounds.top - 20,
-    };
+    // Convert screen coordinates to flow coordinates
+    const position = screenToFlowPosition({
+      x: event.clientX,
+      y: event.clientY,
+    });
 
     const newNode: Node = {
       id: `node_${Date.now()}`,
       type: 'custom',
-      position,
+      // Place node centered on cursor position
+      position: {
+        x: position.x,
+        y: position.y,
+      },
       data: {
         label: '新节点',
         icon: '📌',
@@ -734,7 +752,7 @@ const LifeSystemMapInner: React.FC<LifeSystemMapProps> = ({
 
     setNodes((nds) => [...nds, newNode]);
     setSelectedNode(newNode);
-  }, [setNodes]);
+  }, [setNodes, screenToFlowPosition]);
 
   // Delete selected edge
   const handleDeleteEdge = useCallback(() => {
