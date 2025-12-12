@@ -69,9 +69,14 @@ export const MindMapBoard: React.FC<MindMapBoardProps> = ({
   // --- MOUSE HANDLERS (INITIATORS) ---
 
   const handleMouseDownBoard = (e: React.MouseEvent) => {
-    // Only allow panning if clicking directly on the board or SVG background
-    if (e.button !== 0) return; // Left click only
-    
+    // Allow panning with left click (0) or middle click (1)
+    if (e.button !== 0 && e.button !== 1) return;
+
+    // Prevent default browser behavior for middle click (scroll)
+    if (e.button === 1) {
+      e.preventDefault();
+    }
+
     interactionRef.current = {
       mode: 'PAN',
       activeId: null,
@@ -79,6 +84,28 @@ export const MindMapBoard: React.FC<MindMapBoardProps> = ({
       dragOffset: { x: 0, y: 0 }
     };
     setIsPanning(true);
+  };
+
+  // Handle double-click to create new node
+  const handleDoubleClickBoard = (e: React.MouseEvent) => {
+    // Only handle direct clicks on the board (not on nodes)
+    const target = e.target as HTMLElement;
+    if (target.closest('[id^="node-"]')) return;
+
+    // Find a session from backlog to add, or create placeholder
+    if (unmappedSessions.length > 0) {
+      const sessionToAdd = unmappedSessions[0];
+      const mouseCanvas = getCanvasCoordinates(e.clientX, e.clientY);
+
+      onUpdateLayout({
+        ...layout,
+        [sessionToAdd.id]: {
+          x: mouseCanvas.x - NODE_WIDTH / 2,
+          y: mouseCanvas.y - NODE_HEIGHT / 2,
+          connections: []
+        }
+      });
+    }
   };
 
   const handleMouseDownNode = (e: React.MouseEvent, id: string) => {
@@ -277,10 +304,12 @@ export const MindMapBoard: React.FC<MindMapBoardProps> = ({
       </div>
 
       {/* Canvas */}
-      <div 
+      <div
         ref={boardRef}
         className={`flex-1 relative bg-[#0e0e0e] overflow-hidden ${isPanning ? 'cursor-grabbing' : 'cursor-default'}`}
         onMouseDown={handleMouseDownBoard}
+        onDoubleClick={handleDoubleClickBoard}
+        onAuxClick={(e) => e.preventDefault()}
       >
         {/* Background Grid */}
         <div 
@@ -353,7 +382,7 @@ export const MindMapBoard: React.FC<MindMapBoardProps> = ({
                         id={`node-${id}`}
                         key={id}
                         className={`absolute flex flex-col pointer-events-auto transition-all duration-300 ease-out group/node
-                            ${isDragging ? 'z-50 cursor-grabbing' : 'z-10 hover:z-[60] cursor-grab'}
+                            ${isDragging ? 'z-50 cursor-grabbing' : 'z-10 hover:z-[60] cursor-default'}
                         `}
                         style={{ 
                             left: pos.x, 
