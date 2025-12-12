@@ -713,6 +713,14 @@ const LifeSystemMapInner: React.FC<LifeSystemMapProps> = ({
     setIsEditing(false);
   }, []);
 
+  // Handle double-click on node to edit
+  const onNodeDoubleClick = useCallback((_: React.MouseEvent, node: Node) => {
+    setSelectedNode(node);
+    setSelectedEdge(null);
+    setEditLabel(node.data.label as string);
+    setIsEditing(true);
+  }, []);
+
   // Handle edge selection
   const onEdgeClick = useCallback((_: React.MouseEvent, edge: Edge) => {
     setSelectedEdge(edge);
@@ -1312,6 +1320,7 @@ const LifeSystemMapInner: React.FC<LifeSystemMapProps> = ({
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           onNodeClick={onNodeClick}
+          onNodeDoubleClick={onNodeDoubleClick}
           onEdgeClick={onEdgeClick}
           onPaneClick={() => { setSelectedNode(null); setSelectedEdge(null); }}
           onDoubleClick={onPaneDoubleClick}
