@@ -191,12 +191,47 @@ const categoryColors = {
 
 // Common emoji icons for picker
 const emojiPalette = [
+  // 思考/创意
   '🧠', '💡', '⭐', '🎯', '🚀', '💪', '❤️', '🔥',
+  '💭', '✨', '🌟', '💎', '🏆', '🎖️', '👑', '🔮',
+  // 学习/工作
   '📚', '📖', '🔬', '💻', '📁', '📊', '📝', '✅',
+  '📋', '🗂️', '📌', '🔖', '📎', '✏️', '🖊️', '📐',
+  '🧮', '🔍', '🔎', '📰', '📓', '📒', '📕', '📗',
+  // 运动/健身
   '🏃', '🧗', '🏋️', '🚴', '⚽', '🏀', '🎾', '🏊',
+  '🤸', '🏌️', '🎿', '🛹', '🏄', '🚣', '🧘', '🤺',
+  '🥊', '🥋', '⛳', '🎳', '🏓', '🏸', '🥅', '⛷️',
+  // 健康/生活
   '😴', '🍽️', '☕', '🥗', '💊', '🧘', '🌙', '☀️',
+  '🛌', '⏰', '🌅', '🌄', '🍎', '🥤', '🧃', '🍵',
+  '🥛', '💉', '🩺', '🏥', '🧬', '🫀', '🫁', '🦴',
+  // 工作/商务
   '💼', '🗓️', '📞', '✉️', '🤝', '💰', '📈', '🎓',
+  '💵', '💳', '🏦', '📉', '📅', '🗒️', '📧', '📨',
+  '🖥️', '⌨️', '🖱️', '🖨️', '📠', '📱', '☎️', '💾',
+  // 娱乐/爱好
   '🎨', '🎵', '🎬', '📷', '✈️', '🏠', '🌳', '🐕',
+  '🎸', '🎹', '🎤', '🎧', '🎮', '🎲', '🎭', '🎪',
+  '📺', '📻', '🎥', '📸', '🖼️', '🎞️', '📽️', '🎻',
+  // 旅行/地点
+  '🌍', '🌎', '🌏', '🗺️', '🧭', '⛰️', '🏔️', '🗻',
+  '🏝️', '🏖️', '🌊', '🚗', '🚌', '🚆', '🛫', '🛬',
+  // 自然/动物
+  '🌸', '🌺', '🌻', '🌹', '🌷', '🍀', '🌿', '🍃',
+  '🐱', '🐶', '🐰', '🦊', '🐻', '🐼', '🦁', '🐯',
+  // 表情/符号
+  '😊', '😎', '🤔', '😤', '🥳', '😇', '🤩', '😌',
+  '👍', '👎', '👏', '🙌', '✊', '🤞', '🖐️', '👋',
+  // 天气/时间
+  '🌤️', '⛅', '🌦️', '🌧️', '⛈️', '🌩️', '❄️', '🌈',
+  '⏳', '⌛', '🕐', '🕕', '📆', '🗓️', '⏱️', '⏲️',
+  // 食物/饮料
+  '🍕', '🍔', '🍜', '🍣', '🥩', '🥪', '🌮', '🥙',
+  '🍦', '🍰', '🧁', '🍪', '🍫', '🍩', '🥐', '🥨',
+  // 形状/标记
+  '⭕', '❌', '❓', '❗', '💯', '🔴', '🟠', '🟡',
+  '🟢', '🔵', '🟣', '⚫', '⚪', '🟤', '🔶', '🔷',
 ];
 
 // Node type options
@@ -1201,12 +1236,12 @@ const LifeSystemMapInner: React.FC<LifeSystemMapProps> = ({
                   </button>
                   {showEmojiPicker && (
                     <div
-                      className="absolute left-0 top-full mt-1 p-2 rounded-lg shadow-xl z-50 grid grid-cols-8 gap-1"
-                      style={{ background: colors.bgSecondary, border: `1px solid ${colors.border}`, width: '280px' }}
+                      className="absolute left-0 top-full mt-1 p-2 rounded-lg shadow-xl z-50 grid grid-cols-8 gap-1 max-h-64 overflow-y-auto"
+                      style={{ background: colors.bgSecondary, border: `1px solid ${colors.border}`, width: '300px' }}
                     >
-                      {emojiPalette.map((emoji) => (
+                      {emojiPalette.map((emoji, index) => (
                         <button
-                          key={emoji}
+                          key={`${emoji}-${index}`}
                           onClick={() => handleChangeIcon(emoji)}
                           className="w-8 h-8 rounded hover:bg-white/10 transition-colors text-lg"
                         >
