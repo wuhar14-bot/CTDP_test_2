@@ -710,6 +710,32 @@ const LifeSystemMapInner: React.FC<LifeSystemMapProps> = ({
     setIsEditing(false);
   }, []);
 
+  // Handle double-click on empty canvas to create new node
+  const onPaneDoubleClick = useCallback((event: React.MouseEvent) => {
+    // Get the position in flow coordinates
+    const reactFlowBounds = (event.target as HTMLElement).closest('.react-flow')?.getBoundingClientRect();
+    if (!reactFlowBounds) return;
+
+    const position = {
+      x: event.clientX - reactFlowBounds.left - 50,
+      y: event.clientY - reactFlowBounds.top - 20,
+    };
+
+    const newNode: Node = {
+      id: `node_${Date.now()}`,
+      type: 'custom',
+      position,
+      data: {
+        label: '新节点',
+        icon: '📌',
+        nodeType: 'leaf'
+      },
+    };
+
+    setNodes((nds) => [...nds, newNode]);
+    setSelectedNode(newNode);
+  }, [setNodes]);
+
   // Delete selected edge
   const handleDeleteEdge = useCallback(() => {
     if (!selectedEdge) return;
@@ -1266,6 +1292,7 @@ const LifeSystemMapInner: React.FC<LifeSystemMapProps> = ({
           onNodeClick={onNodeClick}
           onEdgeClick={onEdgeClick}
           onPaneClick={() => { setSelectedNode(null); setSelectedEdge(null); }}
+          onDoubleClick={onPaneDoubleClick}
           nodeTypes={nodeTypes}
           fitView
           attributionPosition="bottom-left"
@@ -1275,16 +1302,19 @@ const LifeSystemMapInner: React.FC<LifeSystemMapProps> = ({
             type: 'smoothstep',
           }}
           proOptions={{ hideAttribution: true }}
-          // Pan with scroll wheel (not with mouse drag)
+          // Pan with scroll wheel or middle mouse button
           panOnScroll={true}
           panOnScrollMode={PanOnScrollMode.Free}
-          panOnDrag={false}
+          panOnDrag={[1, 2]}
           // Selection box with left mouse drag on empty space
           selectionOnDrag={true}
           selectionMode={SelectionMode.Partial}
           // Zoom with Ctrl+scroll or pinch
           zoomOnScroll={false}
           zoomOnPinch={true}
+          // Default cursor style (arrow instead of grab)
+          defaultViewport={{ x: 0, y: 0, zoom: 1 }}
+          className="cursor-default"
         >
           {/* Helper Lines for alignment */}
           <HelperLinesRenderer
